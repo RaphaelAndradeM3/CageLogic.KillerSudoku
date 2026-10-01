@@ -105,9 +105,9 @@ Cada tarefa usa `- [ ] [ID] [P?] [Story?] descrição com caminho de arquivo`. `
 
 **Purpose**: Atualizar instruções de verificação e concluir os gates de build e testes definidos pelo projeto.
 
-- [ ] T029 Atualizar `specs/001-killer-sudoku-rules/quickstart.md` com os projetos efetivamente criados, seus caminhos e os cenários determinísticos implementados para estrutura, validação, jogadas e candidatos.
-- [ ] T030 Executar `dotnet build --configuration Release --warnaserror` na raiz usando `CageLogic.slnx` e corrigir erros ou warnings antes da etapa de testes.
-- [ ] T031 Após o build bem-sucedido, executar `dotnet test --no-build` na raiz usando `CageLogic.slnx` e corrigir falhas nos projetos NUnit.
+- [X] T029 Atualizar `specs/001-killer-sudoku-rules/quickstart.md` com os projetos efetivamente criados, seus caminhos e os cenários determinísticos implementados para estrutura, validação, jogadas e candidatos.
+- [X] T030 Executar `dotnet build --configuration Release --warnaserror` na raiz usando `CageLogic.slnx` e corrigir erros ou warnings antes da etapa de testes.
+- [X] T031 Após o build Release bem-sucedido, executar `dotnet test --configuration Release --no-build` na raiz usando `CageLogic.slnx` e corrigir falhas nos projetos NUnit.
 
 ## Dependencies & Execution Order
 
