@@ -87,15 +87,15 @@ Cada tarefa usa `- [ ] [ID] [P?] [Story?] descrição com caminho de arquivo`. `
 
 ### Testes da User Story 2
 
-- [ ] T023 [P] [US2] Escrever testes NUnit com fixtures determinísticos para candidatos permitidos e removidos por linha, coluna, bloco e cage, conclusão de soma com dígitos distintos, ausência de busca global, célula preenchida e conjunto vazio em `tests/CageLogic.Domain.Tests/Candidates/CandidateCalculatorTests.cs`.
-- [ ] T024 [P] [US2] Escrever testes NUnit para consultar candidatos usando o tabuleiro mais recente após inserir ou limpar um valor, sem resultados desatualizados, em `tests/CageLogic.Application.Tests/Candidates/GetCandidatesUseCaseTests.cs`.
-- [ ] T025 [US2] Executar `dotnet test tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` e `dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` após T023–T024 e registrar a falha esperada dos cenários antes de criar o cálculo e o caso de uso de candidatos.
+- [X] T023 [P] [US2] Escrever testes NUnit com fixtures determinísticos para candidatos permitidos e removidos por linha, coluna, bloco e cage, conclusão de soma com dígitos distintos, ausência de busca global, célula preenchida e conjunto vazio em `tests/CageLogic.Domain.Tests/Candidates/CandidateCalculatorTests.cs`.
+- [X] T024 [P] [US2] Escrever testes NUnit para consultar candidatos usando o tabuleiro mais recente após inserir ou limpar um valor, sem resultados desatualizados, em `tests/CageLogic.Application.Tests/Candidates/GetCandidatesUseCaseTests.cs`.
+- [X] T025 [US2] Executar `dotnet test tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` e `dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` após T023–T024 e registrar a falha esperada dos cenários antes de criar o cálculo e o caso de uso de candidatos.
 
 ### Implementação da User Story 2
 
-- [ ] T026 [US2] Criar `CandidateSet` em `src/CageLogic.Domain/Candidates/CandidateSet.cs`, associado a uma célula vazia e a um conjunto de dígitos de 1 a 9; permitir conjunto vazio como resultado válido para estado inconsistente.
-- [ ] T027 [US2] Implementar `CandidateCalculator` em `src/CageLogic.Domain/Candidates/CandidateCalculator.cs` para remover dígitos presentes na linha, coluna, bloco e cage e reter apenas valores que ainda permitam completar o alvo com dígitos distintos; não executar solver global nem manter cache mutável global.
-- [ ] T028 [US2] Implementar `GetCandidatesUseCase` em `src/CageLogic.Application/Candidates/GetCandidatesUseCase.cs` para consultar o tabuleiro atual e devolver candidatos somente para posições vazias; garantir que consultas após uma jogada ou limpeza usem o novo estado retornado por `ApplyMoveUseCase` e sejam recalculadas sem resultados obsoletos.
+- [X] T026 [US2] Criar `CandidateSet` em `src/CageLogic.Domain/Candidates/CandidateSet.cs`, associado a uma célula vazia e a um conjunto de dígitos de 1 a 9; permitir conjunto vazio como resultado válido para estado inconsistente.
+- [X] T027 [US2] Implementar `CandidateCalculator` em `src/CageLogic.Domain/Candidates/CandidateCalculator.cs` para remover dígitos presentes na linha, coluna, bloco e cage e reter apenas valores que ainda permitam completar o alvo com dígitos distintos; não executar solver global nem manter cache mutável global.
+- [X] T028 [US2] Implementar `GetCandidatesUseCase` em `src/CageLogic.Application/Candidates/GetCandidatesUseCase.cs` para consultar o tabuleiro atual e devolver candidatos somente para posições vazias; garantir que consultas após uma jogada ou limpeza usem o novo estado retornado por `ApplyMoveUseCase` e sejam recalculadas sem resultados obsoletos.
 
 **Checkpoint**: Candidatos locais são atualizados a partir do estado atual do tabuleiro e não dependem do solver global.
 
