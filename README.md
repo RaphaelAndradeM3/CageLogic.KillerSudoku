@@ -73,6 +73,7 @@ As tecnologias acima são propostas na documentação e podem ser detalhadas dur
 - [Ideia do projeto](Ideia.md): visão, público, proposta, arquitetura e roadmap.
 - [Requisitos do produto](PRD.md): objetivos, requisitos funcionais e não funcionais.
 - [Constituição de engenharia](constitution.md): princípios e regras técnicas do projeto.
+- [Especificações do MVP](specs/README.md): mapa das cinco specs, dependências e guardrails de implementação.
 
 ## Executar
 
