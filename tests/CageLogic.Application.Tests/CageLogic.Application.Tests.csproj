@@ -19,4 +19,9 @@
     <Using Include="NUnit.Framework" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CageLogic.Application\CageLogic.Application.csproj" />
+    <ProjectReference Include="..\..\src\CageLogic.Domain\CageLogic.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

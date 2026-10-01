@@ -39,11 +39,11 @@ Cada tarefa usa `- [ ] [ID] [P?] [Story?] descrição com caminho de arquivo`. `
 
 **Purpose**: Configurar a solution e as referências entre projetos antes de implementar histórias.
 
-- [ ] T006 [P] Adicionar os quatro projetos `.csproj` de `src/CageLogic.Domain/`, `src/CageLogic.Application/`, `tests/CageLogic.Domain.Tests/` e `tests/CageLogic.Application.Tests/` à solution `CageLogic.slnx`.
-- [ ] T007 [P] Garantir `<TargetFramework>net10.0</TargetFramework>` e `<Nullable>enable</Nullable>` em `src/CageLogic.Domain/CageLogic.Domain.csproj`, `src/CageLogic.Application/CageLogic.Application.csproj`, `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` e `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj`.
-- [ ] T008 [P] Adicionar a referência de `src/CageLogic.Application/CageLogic.Application.csproj` para `src/CageLogic.Domain/CageLogic.Domain.csproj`, mantendo a dependência voltada para o domínio.
-- [ ] T009 [P] Adicionar a referência de `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` para `src/CageLogic.Domain/CageLogic.Domain.csproj`.
-- [ ] T010 [P] Adicionar referências de `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` para `src/CageLogic.Application/CageLogic.Application.csproj` e `src/CageLogic.Domain/CageLogic.Domain.csproj`.
+- [X] T006 [P] Adicionar os quatro projetos `.csproj` de `src/CageLogic.Domain/`, `src/CageLogic.Application/`, `tests/CageLogic.Domain.Tests/` e `tests/CageLogic.Application.Tests/` à solution `CageLogic.slnx`.
+- [X] T007 [P] Garantir `<TargetFramework>net10.0</TargetFramework>` e `<Nullable>enable</Nullable>` em `src/CageLogic.Domain/CageLogic.Domain.csproj`, `src/CageLogic.Application/CageLogic.Application.csproj`, `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` e `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj`.
+- [X] T008 [P] Adicionar a referência de `src/CageLogic.Application/CageLogic.Application.csproj` para `src/CageLogic.Domain/CageLogic.Domain.csproj`, mantendo a dependência voltada para o domínio.
+- [X] T009 [P] Adicionar a referência de `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` para `src/CageLogic.Domain/CageLogic.Domain.csproj`.
+- [X] T010 [P] Adicionar referências de `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` para `src/CageLogic.Application/CageLogic.Application.csproj` e `src/CageLogic.Domain/CageLogic.Domain.csproj`.
 
 **Checkpoint**: Os projetos e as referências estão prontos; não há dependências de MAUI ou infraestrutura no Domain.
 

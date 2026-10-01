@@ -1,2 +1,10 @@
 <Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CageLogic.Application/CageLogic.Application.csproj" />
+    <Project Path="src/CageLogic.Domain/CageLogic.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj" />
+    <Project Path="tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj" />
+  </Folder>
 </Solution>
