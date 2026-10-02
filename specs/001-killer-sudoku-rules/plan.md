@@ -1,6 +1,6 @@
 # Implementation Plan: Regras e Candidatos de Killer Sudoku
 
-**Branch**: 001-killer-sudoku-rules (contexto Spec Kit; branch Git atual: main) | **Date**: 2026-10-01 | **Spec**: [spec.md](spec.md)
+**Branch**: 001-killer-sudoku-rules | **Date**: 2026-10-01 | **Spec**: [spec.md](spec.md)
 
 **Input**: PRD, regras do README e decisões registradas na especificação 001.
 

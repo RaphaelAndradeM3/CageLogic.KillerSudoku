@@ -1,8 +1,8 @@
 # FEATURE SPEC: Regras e Candidatos de Killer Sudoku
 
-- **Feature Branch**: A definir na implementação
+- **Feature Branch**: 001-killer-sudoku-rules
 - **Created**: 2026-10-01
-- **Status**: Draft
+- **Status**: Implemented
 **Input**: PRD e visão do CageLogic Killer Sudoku; requisitos RN-001 a RN-009 e regras essenciais do README.
 
 ## 1. META IMUTÁVEL (Global Goal)
