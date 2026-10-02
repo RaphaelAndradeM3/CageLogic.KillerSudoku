@@ -155,3 +155,7 @@ Cada tarefa usa `- [ ] [ID] [P?] [Story?] descrição com caminho de arquivo`. `
 - As tarefas de teste estão incluídas porque os critérios independentes das histórias, o plano e a constituição do projeto exigem cobertura determinística para as regras.
 - A pasta `contracts/` não é necessária: esta feature não expõe API ou protocolo externo.
 - Os comandos de validação pertencem à implementação futura; esta geração apenas descreve as tarefas.
+
+## Phase 6: Convergence
+
+- [X] T032 Expor a validação independente de um `SudokuBoard` existente pela Application, criando `ValidateBoardUseCase` em `src/CageLogic.Application/Validation/ValidateBoardUseCase.cs` e testes em `tests/CageLogic.Application.Tests/Validation/ValidateBoardUseCaseTests.cs`; retornar `BoardValidationResult` sem aplicar movimento nem alterar o tabuleiro, conforme `plan.md`.
