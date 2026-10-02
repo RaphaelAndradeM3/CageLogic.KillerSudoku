@@ -4,9 +4,9 @@
 
 - `CageLogic.slnx`: solution .NET 10 na raiz.
 - `src/CageLogic.Domain/`: modelos do puzzle, cages, tabuleiro, movimentos, validação estrutural, conflitos e cálculo de candidatos. O projeto não depende de MAUI ou infraestrutura.
-- `src/CageLogic.Application/`: `ApplyMoveUseCase` aplica/limpa entradas e `GetCandidatesUseCase` calcula candidatos a partir do tabuleiro fornecido.
+- `src/CageLogic.Application/`: `ApplyMoveUseCase` aplica/limpa entradas e retorna o tabuleiro resultante e sua validação; `ValidateBoardUseCase` valida um `SudokuBoard` existente sem aplicar movimento ou alterá-lo; `GetCandidatesUseCase` calcula candidatos a partir do tabuleiro fornecido.
 - `tests/CageLogic.Domain.Tests/`: testes NUnit para estrutura, cobertura, conectividade, soma, conflitos e candidatos.
-- `tests/CageLogic.Application.Tests/`: testes NUnit para movimentos e atualização de candidatos depois de inserir ou limpar um valor.
+- `tests/CageLogic.Application.Tests/`: testes NUnit para movimentos, validação independente do tabuleiro e atualização de candidatos depois de inserir ou limpar um valor.
 
 ## Pré-requisitos
 
@@ -34,6 +34,7 @@ A partir da raiz do repositório:
 
 - Estrutura: coordenadas fora da grade, cages vazias ou com posições duplicadas, cobertura ausente ou sobreposta, desconexão por contato apenas diagonal, alvo estruturalmente inalcançável e valores fixos fora de 1 a 9.
 - Validação: repetição em linha, coluna, bloco e cage; soma de cage que não pode mais ser completada; estado parcial válido/incompleto e estado completo resolvido.
+- Validação independente na Application: `ValidateBoardUseCase` recebe o estado atual e retorna `BoardValidationResult` sem aplicar movimento nem modificar o tabuleiro; os testes cobrem estado parcial válido e conflito de linha.
 - Movimentos: inserir, substituir e limpar valores do jogador; recusar edição de valor fixo com resultado explícito; retornar um novo tabuleiro e sua validação.
 - Candidatos: restrições de linha, coluna, bloco e cage; combinações distintas que completam o alvo; célula preenchida omitida; conjunto vazio em estado local inconsistente; consulta recalculada após inserir/limpar. Não é feita busca por solução global do tabuleiro.
 - Fixtures fixos: os testes não dependem de rede, relógio, aleatoriedade ou estado global.

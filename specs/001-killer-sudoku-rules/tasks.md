@@ -159,3 +159,7 @@ Cada tarefa usa `- [ ] [ID] [P?] [Story?] descrição com caminho de arquivo`. `
 ## Phase 6: Convergence
 
 - [X] T032 Expor a validação independente de um `SudokuBoard` existente pela Application, criando `ValidateBoardUseCase` em `src/CageLogic.Application/Validation/ValidateBoardUseCase.cs` e testes em `tests/CageLogic.Application.Tests/Validation/ValidateBoardUseCaseTests.cs`; retornar `BoardValidationResult` sem aplicar movimento nem alterar o tabuleiro, conforme `plan.md`.
+
+## Phase 7: Convergence
+
+- [X] T033 Atualizar `specs/001-killer-sudoku-rules/quickstart.md` para listar `ValidateBoardUseCase` e os testes de validação independente da Application, conforme T029 e os casos de uso previstos em `plan.md` (partial).
