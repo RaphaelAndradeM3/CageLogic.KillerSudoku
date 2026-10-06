@@ -66,7 +66,7 @@ Os fixtures NUnit criados para o motor são:
 - `PuzzleGeneratorTests` em `tests/CageLogic.Application.Tests/Generation/`.
 - `PuzzleGeneratorPerformanceTests` é opt-in e está fora da suíte comum.
 
-Os fixtures ponta a ponta com solver e classificador reais cobrem Easy (`20261005`), Medium (`4100`) e Hard (`408863218`), todos com zero givens e solução única. O teste Expert atual injeta um classificador fixo para verificar o contrato da pipeline; não há fixture real Expert. A busca exploratória de 500 tentativas com seed `4100` não produziu Expert dentro de 60 s; a pipeline corretamente retornou `Unavailable`. A geração real Expert continua pendente em T040.
+Os fixtures ponta a ponta cobrem Easy (`20261005`), Medium (`4100`), Hard (`408863218`) e Expert (`1597463005`), todos com zero givens e solução única. O caso Expert fornece uma grade resolvida fixa para replay determinístico; o particionador de produção, `SudokuSolver` e `DifficultyAnalyzer` são usados sem substitutos. Para Expert, o particionador usa 29 cages singleton em posições determinísticas e agrupa as demais células em cages conectadas de até oito posições.
 
 Execução focada:
 
@@ -100,4 +100,4 @@ dotnet build <caminho-do-host.csproj> --configuration Release -f net10.0-android
 
 ## Validação executada
 
-Em 2026-10-05, `dotnet build CageLogic.slnx --configuration Release --warnaserror --no-restore` concluiu sem warnings; `dotnet test CageLogic.slnx --no-build --no-restore --configuration Release` aprovou 77 testes e ignorou o benchmark opt-in. O fixture Hard real também passou na suíte. O benchmark opt-in passou no Windows conforme os números acima. O restore de dependências de teste exigiu `dotnet restore CageLogic.slnx --source https://api.nuget.org/v3/index.json` neste ambiente porque o feed privado configurado rejeitou a credencial local.
+Em 2026-10-06, `dotnet build CageLogic.slnx --configuration Release --warnaserror --no-restore` concluiu com 0 warnings e 0 erros; `dotnet test CageLogic.slnx --no-build --no-restore --configuration Release` aprovou 78 testes (34 Domain e 44 Application). O benchmark opt-in não foi executado nesta validação. O restore de dependências de teste exigiu `dotnet restore CageLogic.slnx --source https://api.nuget.org/v3/index.json` neste ambiente porque o feed privado configurado rejeitou a credencial local.

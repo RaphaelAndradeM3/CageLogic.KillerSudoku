@@ -54,6 +54,45 @@ public sealed class PuzzleGeneratorTests
             Is.EqualTo(SolutionMultiplicity.Unique));
     }
 
+    [Test]
+    public void Generate_SeededExpertFixture_UsesProductionPartitionerSolverAndAnalyzer()
+    {
+        int[] solvedGrid =
+        [
+            7, 8, 4, 2, 3, 6, 1, 5, 9,
+            9, 6, 1, 7, 5, 4, 2, 8, 3,
+            3, 2, 5, 8, 9, 1, 4, 7, 6,
+            4, 1, 3, 5, 2, 9, 7, 6, 8,
+            8, 9, 7, 6, 4, 3, 5, 1, 2,
+            2, 5, 6, 1, 7, 8, 3, 9, 4,
+            1, 4, 8, 3, 6, 5, 9, 2, 7,
+            5, 7, 9, 4, 8, 2, 6, 3, 1,
+            6, 3, 2, 9, 1, 7, 8, 4, 5
+        ];
+        var request = new PuzzleGenerationRequest(
+            DifficultyLevel.Expert,
+            new GenerationBudget(1, TimeSpan.FromSeconds(30)),
+            seed: unchecked(2 ^ 0x5F3759DF));
+        var generator = new PuzzleGenerator(new FixedSolvedGridGenerator(solvedGrid));
+
+        var result = generator.Generate(request);
+
+        Assert.That(result.IsSuccess, Is.True,
+            $"{result.UnavailableReason}, attempts={result.Attempts}");
+        var generated = result.GeneratedPuzzle!;
+        Assert.That(generated.Puzzle.Givens, Is.Empty);
+        Assert.That(generated.Difficulty.Level, Is.EqualTo(DifficultyLevel.Expert));
+        Assert.That(generated.Solution.Values, Is.EqualTo(solvedGrid));
+        Assert.That(new SudokuSolver().FindSolutions(generated.Puzzle).Multiplicity,
+            Is.EqualTo(SolutionMultiplicity.Unique));
+
+        var replay = generator.Generate(request);
+
+        Assert.That(replay.IsSuccess, Is.True);
+        Assert.That(CageSignature(replay.GeneratedPuzzle!.Puzzle), Is.EqualTo(CageSignature(generated.Puzzle)));
+        Assert.That(replay.GeneratedPuzzle.Solution.Values, Is.EqualTo(generated.Solution.Values));
+    }
+
     [TestCase(DifficultyLevel.Easy)]
     [TestCase(DifficultyLevel.Medium)]
     [TestCase(DifficultyLevel.Hard)]
@@ -220,6 +259,15 @@ public sealed class PuzzleGeneratorTests
                 level,
                 DifficultyProfileCatalog.CurrentVersion,
                 Array.Empty<LogicalTechniqueId>());
+        }
+    }
+
+    private sealed class FixedSolvedGridGenerator(IReadOnlyList<int> values) : ISolvedGridGenerator
+    {
+        public IReadOnlyList<int> Generate(int seed, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return values.ToArray();
         }
     }
 

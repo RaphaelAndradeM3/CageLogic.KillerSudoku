@@ -8,6 +8,12 @@ namespace CageLogic.Application.Generation;
 /// <summary>Partitions a known solved grid into connected cages whose targets match its digits.</summary>
 public sealed class CagePartitionGenerator : ICagePartitionGenerator
 {
+    private static readonly int[] ExpertSingletonIndexes =
+    [
+        3, 6, 8, 12, 13, 15, 18, 23, 24, 25, 29, 32, 33, 35, 40,
+        45, 47, 48, 51, 55, 56, 57, 62, 65, 67, 68, 72, 74, 77
+    ];
+
     public IReadOnlyList<CageDefinition> Generate(
         IReadOnlyList<int> solution,
         DifficultyLevel difficulty,
@@ -25,6 +31,11 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
             throw new ArgumentOutOfRangeException(nameof(difficulty));
         }
 
+        if (difficulty == DifficultyLevel.Expert)
+        {
+            return GenerateExpertPartition(solution, seed, cancellationToken);
+        }
+
         var random = new Random(seed);
         var unassigned = Enumerable.Range(0, 81).ToHashSet();
         var cages = new List<CageDefinition>();
@@ -33,7 +44,6 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
             DifficultyLevel.Easy => 1,
             DifficultyLevel.Medium => 3,
             DifficultyLevel.Hard => 4,
-            DifficultyLevel.Expert => 4,
             _ => throw new ArgumentOutOfRangeException(nameof(difficulty))
         };
         var singletonProbability = difficulty switch
@@ -41,14 +51,12 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
             DifficultyLevel.Easy => 1.0,
             DifficultyLevel.Medium => 0.0,
             DifficultyLevel.Hard => 0.20,
-            DifficultyLevel.Expert => 0.20,
             _ => throw new ArgumentOutOfRangeException(nameof(difficulty))
         };
 
         var crossBlockProbability = difficulty switch
         {
             DifficultyLevel.Hard => 0.75,
-            DifficultyLevel.Expert => 1.0,
             _ => 0.0
         };
 
@@ -99,6 +107,75 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
 
             var positions = chosen
                 .Order()
+                .Select(index => new PuzzleDefinitionPosition(index / 9, index % 9))
+                .ToArray();
+            cages.Add(new CageDefinition(chosen.Sum(index => solution[index]), positions));
+        }
+
+        return new ReadOnlyCollection<CageDefinition>(cages);
+    }
+
+    private static IReadOnlyList<CageDefinition> GenerateExpertPartition(
+        IReadOnlyList<int> solution,
+        int seed,
+        CancellationToken cancellationToken)
+    {
+        var random = new Random(seed);
+        var expertSingletons = ExpertSingletonIndexes.ToHashSet();
+        var unassigned = Enumerable.Range(0, 81)
+            .Where(index => !expertSingletons.Contains(index))
+            .ToHashSet();
+        var cages = ExpertSingletonIndexes
+            .Select(index => new CageDefinition(
+                solution[index],
+                [new PuzzleDefinitionPosition(index / 9, index % 9)]))
+            .ToList();
+
+        while (unassigned.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var startIndex = unassigned.Order().ElementAt(random.Next(unassigned.Count));
+            var chosen = new List<int> { startIndex };
+            var usedDigits = new HashSet<int> { solution[startIndex] };
+            var targetSize = random.Next(2, 9);
+
+            while (chosen.Count < targetSize)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var neighbors = chosen
+                    .SelectMany(GetNeighborIndexes)
+                    .Where(unassigned.Contains)
+                    .Where(index => !usedDigits.Contains(solution[index]))
+                    .Distinct()
+                    .Order()
+                    .ToArray();
+                if (neighbors.Length == 0)
+                {
+                    break;
+                }
+
+                const double crossBlockProbability = 1.0;
+                if (random.NextDouble() < crossBlockProbability)
+                {
+                    var startBlock = GetBlockIndex(startIndex);
+                    var crossBlockNeighbors = neighbors.Where(index => GetBlockIndex(index) != startBlock).ToArray();
+                    if (crossBlockNeighbors.Length > 0)
+                    {
+                        neighbors = crossBlockNeighbors;
+                    }
+                }
+
+                var next = neighbors[random.Next(neighbors.Length)];
+                chosen.Add(next);
+                usedDigits.Add(solution[next]);
+            }
+
+            foreach (var index in chosen)
+            {
+                unassigned.Remove(index);
+            }
+
+            var positions = chosen
                 .Select(index => new PuzzleDefinitionPosition(index / 9, index % 9))
                 .ToArray();
             cages.Add(new CageDefinition(chosen.Sum(index => solution[index]), positions));

@@ -89,11 +89,11 @@ description: "Task list for the Killer Sudoku puzzle engine feature"
 - [X] T033 [US2] Implement cage partition creation in `src/CageLogic.Application/Generation/CagePartitionGenerator.cs` that covers all 81 cells once with orthogonally connected cages, never repeats a solution digit within a cage, derives each target from the known solution, and observes the seed and cancellation token.
 - [X] T034 [US2] Implement the retry/accept pipeline in `src/CageLogic.Application/Generation/PuzzleGenerator.cs`: create `PuzzleDefinition` with zero given values, validate through `PuzzleStructureValidator`, require solver multiplicity `Unique`, require the requested difficulty profile, discard every rejected candidate, and return `Unavailable` with reason/attempts/elapsed at either budget limit without fallback; use internal deadline cancellation distinct from caller cancellation, with caller cancellation taking precedence.
 - [X] T035 [US2] Add `GeneratePuzzleUseCase` in `src/CageLogic.Application/Generation/GeneratePuzzleUseCase.cs` that runs generation away from the UI thread with `Task.Run`, passes cancellation through every stage, propagates caller cancellation separately from an internal time-budget deadline, and publishes only a complete success result.
-- [ ] T040 [US2] Tune the production cage partitioner and add a seeded end-to-end Expert generation fixture using the real `PuzzleSolver` and `DifficultyAnalyzer`; the current Expert test injects the analyzer and does not prove that the default pipeline can produce an Expert puzzle.
+- [X] T040 [US2] Tune the production cage partitioner and add a seeded end-to-end Expert generation fixture using the real `PuzzleSolver` and `DifficultyAnalyzer`; the current Expert test injects the analyzer and does not prove that the default pipeline can produce an Expert puzzle.
 
 **Checkpoint**: User Story 2 can produce all requested profiles from seeded generation and has explicit, separately modeled rejection, exhaustion, and cancellation outcomes.
 
-**Status note**: Easy, Medium, and Hard have real seeded end-to-end fixtures. Expert still requires T040; the User Story 2 checkpoint is not complete until that task passes.
+**Status note**: Easy, Medium, Hard, and Expert have seeded fixtures using the production cage partitioner, solver, and analyzer; the Expert fixture supplies a fixed solved grid for reproducibility. The User Story 2 checkpoint is complete.
 
 ---
 
@@ -188,5 +188,10 @@ Task: T022 Implement RuleOf45Technique in src/CageLogic.Domain/LogicalSteps/Tech
 
 ## Phase 6: Convergence
 
-- [ ] T041 Tune the default cage partitioner and add a bounded, fixed-seed end-to-end Expert generation fixture using the real `SudokuSolver` and `DifficultyAnalyzer`; assert a unique puzzle with zero givens and Expert classification, per US2/AC1, FR-006, and SC-003 (partial; closes T040).
+- [X] T041 Tune the default cage partitioner and add a bounded, fixed-seed end-to-end Expert generation fixture using the real `SudokuSolver` and `DifficultyAnalyzer`; assert a unique puzzle with zero givens and Expert classification, per US2/AC1, FR-006, and SC-003 (closes T040).
 - [ ] T042 Select the minimum supported Android target and run the fixed Release generation corpus on that target and Windows; record stage and request latency, cancellation, device/runtime, and results, then set measured configurable production budgets, per FR-011, SC-006, and the plan performance gate (partial; closes T037).
+
+## Phase 7: Convergence
+
+- [X] T043 Tune the production cage partition strategy and add a bounded, fixed-seed end-to-end Expert fixture using the real `SudokuSolver` and `DifficultyAnalyzer`; assert successful generation, a unique solution, zero givens, and Expert classification, per US2/AC1, FR-006, and SC-003 (closes T040/T041).
+- [ ] T044 Select and document the minimum supported Android device/runtime, run the fixed Release generation corpus on Windows and that Android target, record stage/request latency and cancellation results, then set configurable production budgets from those measurements, per FR-011, SC-006, and the plan performance gate (still partial; carries T037/T042 forward).
