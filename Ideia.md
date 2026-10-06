@@ -223,8 +223,8 @@ Possíveis estratégias:
 2. Hidden Single
 3. Cage Single
 4. Cage Combination
-5. Rule of 45
-6. Cage/Box Intersection
+5. Cage/Region Intersection
+6. Rule of 45
 7. Naked Pair
 8. Hidden Pair
 9. Naked Triple

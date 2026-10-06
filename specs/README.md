@@ -35,4 +35,5 @@ Multiplayer, login, nuvem, anúncios, monetização, iOS e publicação em lojas
 - Quando existir solution, executar dotnet build --configuration Release --warnaserror e, após build bem-sucedido, dotnet test --no-build.
 - Executar builds dos targets Windows e Android após workloads serem configurados. Rodar testes focados e a suíte existente conforme projetos e convenções reais.
 - Usar filtro Category=Integration somente se a categoria for configurada no projeto. WebApplicationFactory não é pressuposto para um aplicativo MAUI offline.
-- O repositório ainda não tem .sln, projetos ou testes. Nenhum build ou teste foi executado ao criar estas especificações.
+- `CageLogic.slnx`, as bibliotecas `CageLogic.Domain` e `CageLogic.Application` e os projetos NUnit de teste já existem em .NET 10. Eles cobrem a base implementada em 001; o host MAUI e os targets Windows/Android ainda não existem.
+- Os gates `dotnet build CageLogic.slnx --configuration Release --warnaserror` e, após sucesso, `dotnet test CageLogic.slnx --no-build --configuration Release` aplicam-se à solution atual. A atualização destes documentos não executou esses comandos.

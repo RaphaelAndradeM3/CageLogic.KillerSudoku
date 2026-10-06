@@ -41,7 +41,7 @@ Criar a base de domínio e aplicação para representar um tabuleiro Killer Sudo
 - O contexto de .specify/memory/constitution.md contém apenas placeholders; esta verificação usa a constituição de engenharia publicada em constitution.md e os guardrails de specs/README.md.
 - A meta de latência permanece sem número porque a grade tem tamanho fixo e a feature não executa solver global. Esse ponto não bloqueia o desenho; medir depois da primeira implementação.
 
-**Gate após o desenho: PASS.** Os artefatos mantêm as três fatias da especificação, sem violação justificada ou novo componente externo. O build Release e os testes tornam-se executáveis quando a solution e os projetos existirem. Builds Windows/Android só serão aplicáveis quando a feature 004 introduzir o host MAUI e os workloads correspondentes; esta feature produz bibliotecas net10.0 sem alvo de plataforma.
+**Gate após o desenho: PASS.** Os artefatos mantêm as três fatias da especificação, sem violação justificada ou novo componente externo. A solution e os projetos de biblioteca/teste agora existem, então os gates Release se aplicam às bibliotecas. Builds Windows/Android só serão aplicáveis quando a feature 004 introduzir o host MAUI e os workloads correspondentes; esta feature produz bibliotecas net10.0 sem alvo de plataforma.
 
 ## Project Structure
 
@@ -62,6 +62,6 @@ Não criar contracts/: esta feature não expõe API externa, protocolo de integr
 - tests/CageLogic.Domain.Tests/: testes determinísticos das regras e modelos.
 - tests/CageLogic.Application.Tests/: testes de coordenação dos casos de uso.
 
-MAUI, Infrastructure, persistência, solver global e tela do jogo ficam para as features que os introduzem. O repositório ainda não possui solution, projetos ou testes; a criação dessas bases deve acontecer na implementação das fatias desta feature.
+MAUI, Infrastructure, persistência, solver global e tela do jogo ficam para as features que os introduzem. Esta feature criou a solution, as bibliotecas Domain/Application e os projetos de teste usados pelas fatias de regras e candidatos.
 
 **Structure Decision**: Manter Domain e Application como bibliotecas net10.0 independentes do host. Criar testes junto às regras e casos de uso. A camada MAUI consumirá os resultados em uma feature posterior. As decisões seguem a dependência voltada para dentro e evitam adicionar projetos sem função nesta feature.

@@ -124,13 +124,13 @@ O jogador consulta os valores que ainda podem ocupar uma célula vazia no estado
 
 ## 4. GATES DE VALIDAÇÃO (.NET Toolchain)
 
-Quando a solution existir, executar na raiz:
+Na solution existente, executar na raiz:
 
 - dotnet build --configuration Release --warnaserror
 - dotnet test --no-build após build bem-sucedido
 - Compilar os targets Windows e Android quando workloads e SDKs estiverem configurados.
 
-Os comandos ainda não podem ser executados: o repositório contém apenas documentação e não possui solution ou projetos.
+Esses comandos se aplicam à `CageLogic.slnx` e aos projetos `net10.0` existentes. Builds dos targets Windows/Android dependem do host MAUI e dos workloads que serão introduzidos posteriormente.
 
 ## 5. INSTRUÇÕES DE EXECUÇÃO PARA O AGENTE (Agent Guardrails)
 

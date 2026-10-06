@@ -2,7 +2,7 @@
 
 Aplicativo multiplataforma de **Killer Sudoku**, planejado em .NET 10 e .NET MAUI para Windows e Android. A proposta combina puzzles com solução única, validação durante a partida e dicas que explicam o raciocínio usado para avançar.
 
-> **Status:** o repositório está na fase de definição do produto e da arquitetura. No momento, contém documentação; ainda não há solução .NET nem aplicativo executável.
+> **Status:** a base de regras e candidatos da feature 001 já existe nas bibliotecas `CageLogic.Domain` e `CageLogic.Application`, com projetos de teste NUnit em `net10.0`. O motor de puzzles, as demais features e o host MAUI ainda estão em desenvolvimento; portanto, ainda não há aplicativo executável.
 
 ## Visão do projeto
 
@@ -17,7 +17,7 @@ O CageLogic pretende oferecer uma experiência offline de Killer Sudoku para que
 - Registrar tempo, erros, dicas e estatísticas da partida.
 - Jogar offline em Windows e Android.
 
-Essas funcionalidades fazem parte da visão e dos requisitos do produto; ainda não estão implementadas.
+As funcionalidades de geração, dicas, sessão e progresso ainda estão planejadas. Regras, validação, jogadas e candidatos já têm uma implementação inicial nas bibliotecas .NET.
 
 ## Regras do jogo
 
@@ -61,8 +61,8 @@ As tecnologias acima são propostas na documentação e podem ser detalhadas dur
 
 ## Roadmap inicial
 
-1. Criar a solução, os projetos e os testes de domínio.
-2. Implementar validações, cages e cálculo de candidatos.
+1. Criar a solução, os projetos e os testes de domínio. **Concluído.**
+2. Implementar validações, cages e cálculo de candidatos. **Concluído na base da feature 001.**
 3. Desenvolver solver e verificação de solução única.
 4. Criar estratégias de dicas e explicações.
 5. Desenvolver o gerador e a classificação de dificuldade.
@@ -77,7 +77,7 @@ As tecnologias acima são propostas na documentação e podem ser detalhadas dur
 
 ## Executar
 
-Ainda não há uma solução ou projeto executável neste repositório. As instruções de instalação, compilação e execução serão adicionadas quando a aplicação for criada.
+As bibliotecas e seus testes podem ser compilados na raiz com `dotnet build CageLogic.slnx --configuration Release --warnaserror`; após um build bem-sucedido, execute `dotnet test CageLogic.slnx --no-build --configuration Release`. O aplicativo ainda não é executável porque o host MAUI não foi criado.
 
 ## Licença
 
