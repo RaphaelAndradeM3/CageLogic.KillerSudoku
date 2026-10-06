@@ -8,7 +8,7 @@ namespace CageLogic.Application.Solving;
 /// <summary>Counts solutions for a validated Killer Sudoku puzzle, stopping after the second.</summary>
 public sealed class SudokuSolver
 {
-    private readonly CandidateCalculator _candidateCalculator;
+    private readonly ICandidateCalculator _candidateCalculator;
     private readonly SudokuBoardValidator _boardValidator;
 
     public SudokuSolver()
@@ -17,6 +17,11 @@ public sealed class SudokuSolver
     }
 
     public SudokuSolver(CandidateCalculator candidateCalculator, SudokuBoardValidator boardValidator)
+        : this((ICandidateCalculator)candidateCalculator, boardValidator)
+    {
+    }
+
+    public SudokuSolver(ICandidateCalculator candidateCalculator, SudokuBoardValidator boardValidator)
     {
         ArgumentNullException.ThrowIfNull(candidateCalculator);
         ArgumentNullException.ThrowIfNull(boardValidator);
@@ -50,6 +55,7 @@ public sealed class SudokuSolver
             }
 
             var candidateSets = _candidateCalculator.Calculate(board);
+            cancellationToken.ThrowIfCancellationRequested();
             if (candidateSets.Count == 0)
             {
                 if (!_boardValidator.Validate(board).IsSolved)

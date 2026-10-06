@@ -5,7 +5,7 @@ using CageLogic.Domain.Validation;
 namespace CageLogic.Application.Difficulty;
 
 /// <summary>Classifies a puzzle using the least advanced profile that completes its logical trace.</summary>
-public sealed class DifficultyAnalyzer
+public sealed class DifficultyAnalyzer : IDifficultyAnalyzer
 {
     private readonly DifficultyProfileCatalog _catalog;
     private readonly ILogicalStepAnalyzer _stepAnalyzer;

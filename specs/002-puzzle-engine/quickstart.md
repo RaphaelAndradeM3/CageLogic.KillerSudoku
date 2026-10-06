@@ -54,4 +54,50 @@ Usar `--filter FullyQualifiedName~NomeDoCaso` quando for útil executar um cená
 
 Antes de configurar limite padrão de produção, selecionar e registrar o Android mínimo/dispositivo representativo e rodar Release nele e num Windows, usando uma lista fixa de seeds. Registrar p50/p95/máxima do pedido total e de geração de grade, cages, validação estrutural, contagem de unicidade e dificuldade; também tentativas, motivos de rejeição e latência de cancelamento. Usar os números e a meta de responsividade escolhida para fixar limites de tempo e tentativas. Testes automatizados continuam usando orçamento determinístico por tentativas e não dependem desse tempo de parede. A biblioteca permanece implementável e testável com orçamentos explícitos antes dessa decisão de release.
 
-Nenhum comando de build/test ou benchmark foi executado nesta etapa de planejamento.
+O plano original não executou comandos; a validação da implementação está registrada abaixo.
+
+## Fixtures disponíveis na implementação
+
+Os fixtures NUnit criados para o motor são:
+
+- `SudokuSolverNoSolutionTests`, `SudokuSolverMultiplicityTests` e `SudokuSolverCancellationTests` em `tests/CageLogic.Application.Tests/Solving/`.
+- `LogicalTechniqueTests` e `LogicalStateTests` em `tests/CageLogic.Domain.Tests/LogicalSteps/`.
+- `DifficultyAnalyzerTests` em `tests/CageLogic.Application.Tests/Difficulty/`.
+- `PuzzleGeneratorTests` em `tests/CageLogic.Application.Tests/Generation/`.
+- `PuzzleGeneratorPerformanceTests` é opt-in e está fora da suíte comum.
+
+Os fixtures ponta a ponta com solver e classificador reais cobrem Easy (`20261005`), Medium (`4100`) e Hard (`408863218`), todos com zero givens e solução única. O teste Expert atual injeta um classificador fixo para verificar o contrato da pipeline; não há fixture real Expert. A busca exploratória de 500 tentativas com seed `4100` não produziu Expert dentro de 60 s; a pipeline corretamente retornou `Unavailable`. A geração real Expert continua pendente em T040.
+
+Execução focada:
+
+```powershell
+dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj --configuration Release --filter FullyQualifiedName~SudokuSolver
+dotnet test tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj --configuration Release --filter FullyQualifiedName~LogicalTechniqueTests
+dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj --configuration Release --filter FullyQualifiedName~DifficultyAnalyzerTests
+dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj --configuration Release --filter FullyQualifiedName~PuzzleGeneratorTests
+```
+
+O benchmark opt-in pode ser executado em Release assim:
+
+```powershell
+dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj --configuration Release --filter FullyQualifiedName~PuzzleGeneratorPerformanceTests --logger "console;verbosity=detailed"
+```
+
+## Resultado de benchmark disponível
+
+Em 2026-10-05, o fixture Release foi executado no ambiente Windows 10 x64 (`10.0.19045`), SDK .NET `10.0.401` e runtime `10.0.12`, usando dez seeds fixas de dificuldade Easy (`20261001` a `20261010`). A latência total teve p50 de `160,55 ms`, p95 de `687,57 ms` e máximo de `687,57 ms`. Nas etapas, p50/p95/máximo foram: grade `0,03/4,02/4,02 ms`; cages `0,25/9,26/9,26 ms`; estrutura `0,51/16,45/16,45 ms`; unicidade `63,87/501,60/501,60 ms`; análise lógica `87,37/179,30/179,30 ms`. O cenário controlado de rejeição registrou três estruturas inválidas em três tentativas. A resposta observada ao token já cancelado foi `11,51 ms` neste processo; esse número não é um limite garantido.
+
+Os valores acima medem este ambiente compartilhado e puzzles Easy com cages singleton. Não definem orçamento de produção. O repositório ainda não contém host MAUI nem configuração de aparelho Android mínimo; workloads Android e MAUI Windows estão instalados, mas não há dispositivo Android selecionado/conectado. A API continua exigindo `GenerationBudget` explícito. Não configurar defaults até repetir o corpus em Windows de produto e no Android mínimo escolhido.
+
+## Builds de plataforma
+
+Hoje, `CageLogic.slnx` contém somente bibliotecas e testes `net10.0`; não há projeto host para targets de plataforma. Quando a feature 004 adicionar o host MAUI, executar no projeto host real:
+
+```powershell
+dotnet build <caminho-do-host.csproj> --configuration Release -f net10.0-windows10.0.19041.0
+dotnet build <caminho-do-host.csproj> --configuration Release -f net10.0-android
+```
+
+## Validação executada
+
+Em 2026-10-05, `dotnet build CageLogic.slnx --configuration Release --warnaserror --no-restore` concluiu sem warnings; `dotnet test CageLogic.slnx --no-build --no-restore --configuration Release` aprovou 77 testes e ignorou o benchmark opt-in. O fixture Hard real também passou na suíte. O benchmark opt-in passou no Windows conforme os números acima. O restore de dependências de teste exigiu `dotnet restore CageLogic.slnx --source https://api.nuget.org/v3/index.json` neste ambiente porque o feed privado configurado rejeitou a credencial local.

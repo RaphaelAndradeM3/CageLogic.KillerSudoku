@@ -87,3 +87,9 @@ As deduções compartilháveis residem em Domain como passos sem explicação te
 - Microsoft Learn, [cancelamento cooperativo em threads gerenciadas](https://learn.microsoft.com/en-us/dotnet/standard/threading/cancellation-in-managed-threads) e [cancelamento de tasks](https://learn.microsoft.com/en-us/dotnet/standard/parallel-programming/task-cancellation). Referência para propagar token, observar cancelamento e representar cancelamento de task.
 - Microsoft Learn, [classe `System.Random` (.NET 10)](https://learn.microsoft.com/en-us/dotnet/api/system.random?view=net-10.0). Referência para aleatoriedade com seed e limites de compatibilidade entre versões.
 - Google, [OR-Tools para .NET](https://developers.google.com/optimization/install/dotnet/). Fonte oficial da alternativa externa considerada; não selecionada nesta implementação.
+
+## Medição local da implementação (2026-10-05)
+
+O fixture `PuzzleGeneratorPerformanceTests` foi executado em Release no Windows 10 x64 (`10.0.19045`), SDK .NET `10.0.401` e runtime `10.0.12`, com dez seeds fixas Easy (`20261001` a `20261010`). Latência total: p50 `160,55 ms`, p95 `687,57 ms`, máximo `687,57 ms`. Durações p50/p95/máximo: grade `0,03/4,02/4,02 ms`; cages `0,25/9,26/9,26 ms`; validação estrutural `0,51/16,45/16,45 ms`; busca de unicidade `63,87/501,60/501,60 ms`; análise lógica `87,37/179,30/179,30 ms`. A carga controlada registrou três rejeições `InvalidStructure` em três tentativas; resposta ao token já cancelado foi `11,51 ms` nesta execução.
+
+Isso é uma linha de base de ambiente compartilhado e puzzles Easy com cages singleton, não um orçamento de produção nem uma meta de latência. O repositório contém workloads Android e MAUI Windows, mas não contém host MAUI e não havia dispositivo Android selecionado/conectado para a medição. `GenerationBudget` permanece explícito e sem default; selecionar o aparelho/runtime Android mínimo e repetir o corpus continua como gate de release.
