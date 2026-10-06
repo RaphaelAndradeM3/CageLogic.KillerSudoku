@@ -66,7 +66,7 @@ Os fixtures NUnit criados para o motor são:
 - `PuzzleGeneratorTests` em `tests/CageLogic.Application.Tests/Generation/`.
 - `PuzzleGeneratorPerformanceTests` é opt-in e está fora da suíte comum.
 
-Os fixtures ponta a ponta cobrem Easy (`20261005`), Medium (`4100`), Hard (`408863218`) e Expert (`1597463005`), todos com zero givens e solução única. O caso Expert fornece uma grade resolvida fixa para replay determinístico; o particionador de produção, `SudokuSolver` e `DifficultyAnalyzer` são usados sem substitutos. Para Expert, o particionador usa 29 cages singleton em posições determinísticas e agrupa as demais células em cages conectadas de até oito posições.
+Para Expert, a seed escolhe uma rotação ou reflexão do tabuleiro que desloca as 29 cages singleton por diferentes posições sem quebrar linhas, colunas, blocos ou conectividade das cages; repetir a seed reproduz o particionamento.
 
 Execução focada:
 
@@ -80,7 +80,7 @@ dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj
 O benchmark opt-in pode ser executado em Release assim:
 
 ```powershell
-dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj --configuration Release --filter FullyQualifiedName~PuzzleGeneratorPerformanceTests --logger "console;verbosity=detailed"
+dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj --configuration Release --filter FullyQualifiedName~PuzzleGeneratorPerformanceTests --logger "console;verbosity=detailed" -- NUnit.ExplicitMode=Relaxed
 ```
 
 ## Resultado de benchmark disponível
@@ -88,6 +88,8 @@ dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj
 Em 2026-10-05, o fixture Release foi executado no ambiente Windows 10 x64 (`10.0.19045`), SDK .NET `10.0.401` e runtime `10.0.12`, usando dez seeds fixas de dificuldade Easy (`20261001` a `20261010`). A latência total teve p50 de `160,55 ms`, p95 de `687,57 ms` e máximo de `687,57 ms`. Nas etapas, p50/p95/máximo foram: grade `0,03/4,02/4,02 ms`; cages `0,25/9,26/9,26 ms`; estrutura `0,51/16,45/16,45 ms`; unicidade `63,87/501,60/501,60 ms`; análise lógica `87,37/179,30/179,30 ms`. O cenário controlado de rejeição registrou três estruturas inválidas em três tentativas. A resposta observada ao token já cancelado foi `11,51 ms` neste processo; esse número não é um limite garantido.
 
 Os valores acima medem este ambiente compartilhado e puzzles Easy com cages singleton. Não definem orçamento de produção. O repositório ainda não contém host MAUI nem configuração de aparelho Android mínimo; workloads Android e MAUI Windows estão instalados, mas não há dispositivo Android selecionado/conectado. A API continua exigindo `GenerationBudget` explícito. Não configurar defaults até repetir o corpus em Windows de produto e no Android mínimo escolhido.
+
+Em 2026-10-06, o mesmo benchmark foi executado em Release no Windows 10 x64 (`10.0.19045.0`), SDK .NET `10.0.401` e runtime `10.0.12`. No corpus Easy, a latência total foi p50 `218,09 ms`, p95 `613,02 ms` e máxima `613,02 ms`; a etapa de unicidade teve p50 `13,21 ms`, p95 `95,93 ms` e máxima `95,93 ms`. O fixture Hard (`408863218`) levou `1.854,39 ms`, com unicidade em `12,72 ms` e análise de dificuldade em `1.836,43 ms`. O fixture Expert (`1597463005`) levou `146,87 ms`, com unicidade em `2,56 ms` e análise de dificuldade em `135,61 ms`. Hard e Expert são uma execução fixa cada, não uma distribuição p50/p95. Os tempos confirmam que a busca de unicidade não é o gargalo desses fixtures; a análise de dificuldade dominou o caso Hard. São medições deste host e não definem orçamento Android ou de produção.
 
 ## Builds de plataforma
 

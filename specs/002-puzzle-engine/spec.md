@@ -162,7 +162,7 @@ A classificação mede o perfil menos avançado que completa uma trilha lógica 
 Na solution existente, executar na raiz:
 
 - dotnet build --configuration Release --warnaserror
-- dotnet test --no-build após build bem-sucedido
+- dotnet test --no-build --configuration Release após build bem-sucedido
 - Compilar os targets Windows e Android quando workloads e SDKs estiverem configurados.
 
 Esses gates se aplicam à `CageLogic.slnx` e aos projetos `net10.0` existentes. Builds dos targets Windows/Android dependem do host MAUI e dos workloads que serão introduzidos pela feature 004.

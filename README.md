@@ -2,22 +2,26 @@
 
 Aplicativo multiplataforma de **Killer Sudoku**, planejado em .NET 10 e .NET MAUI para Windows e Android. A proposta combina puzzles com solução única, validação durante a partida e dicas que explicam o raciocínio usado para avançar.
 
-> **Status:** a base de regras e candidatos da feature 001 já existe nas bibliotecas `CageLogic.Domain` e `CageLogic.Application`, com projetos de teste NUnit em `net10.0`. O motor de puzzles, as demais features e o host MAUI ainda estão em desenvolvimento; portanto, ainda não há aplicativo executável.
+> **Status:** as bibliotecas `CageLogic.Domain` e `CageLogic.Application` já incluem regras, candidatos, solver, geração de puzzles e análise de dificuldade, com testes NUnit em `net10.0`. As dicas, a sessão de jogo, a progressão e o host MAUI continuam em desenvolvimento; ainda não há aplicativo executável.
 
 ## Visão do projeto
 
 O CageLogic pretende oferecer uma experiência offline de Killer Sudoku para quem quer jogar e aprender técnicas de resolução. As dicas deverão priorizar explicações e destaques visuais, deixando a revelação direta de uma resposta como último recurso.
 
+## Recursos disponíveis nas bibliotecas
+
+- Gerar puzzles por dificuldade com seed, orçamento configurável e verificação de solução única.
+- Resolver puzzles e classificar dificuldade por uma trilha lógica reproduzível.
+
 ## Funcionalidades planejadas
 
-- Criar puzzles por dificuldade e verificar que cada um tenha solução única.
 - Inserir e apagar valores, usar candidatos e validar as regras do tabuleiro e das cages.
 - Desfazer e refazer jogadas e salvar a partida localmente para continuar depois.
 - Solicitar dicas progressivas com explicações de técnicas lógicas.
 - Registrar tempo, erros, dicas e estatísticas da partida.
 - Jogar offline em Windows e Android.
 
-As funcionalidades de geração, dicas, sessão e progresso ainda estão planejadas. Regras, validação, jogadas e candidatos já têm uma implementação inicial nas bibliotecas .NET.
+Dicas, sessão de jogo, progressão e aplicativo MAUI continuam planejados. Regras, validação, candidatos, resolução, geração e classificação de dificuldade já estão implementados nas bibliotecas .NET.
 
 ## Regras do jogo
 
@@ -63,9 +67,9 @@ As tecnologias acima são propostas na documentação e podem ser detalhadas dur
 
 1. Criar a solução, os projetos e os testes de domínio. **Concluído.**
 2. Implementar validações, cages e cálculo de candidatos. **Concluído na base da feature 001.**
-3. Desenvolver solver e verificação de solução única.
+3. Desenvolver solver e verificação de solução única. **Concluído nas bibliotecas Application.**
 4. Criar estratégias de dicas e explicações.
-5. Desenvolver o gerador e a classificação de dificuldade.
+5. Desenvolver o gerador e a classificação de dificuldade. **Concluído nas bibliotecas Application.**
 6. Construir a interface MAUI, persistência e experiência de jogo.
 
 ## Documentação

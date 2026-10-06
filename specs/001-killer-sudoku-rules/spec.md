@@ -102,10 +102,10 @@ O jogador consulta os valores que ainda podem ocupar uma célula vazia no estado
 
 ## 2. CONTRATOS & LIMITES DA ARQUITETURA
 
-- **Camadas previstas afetadas**: Domain e Application; a tela de jogo consumirá os resultados. Os projetos concretos ainda serão definidos ao criar a solution.
+- **Camadas previstas afetadas**: `CageLogic.Domain` e `CageLogic.Application` na solution `CageLogic.slnx`; os projetos NUnit `CageLogic.Domain.Tests` e `CageLogic.Application.Tests` também existem, todos com target `net10.0`. A tela de jogo consumirá os resultados quando o host MAUI for criado.
 - O domínio não dependerá de MAUI, SQLite ou logging de infraestrutura.
 - Validações esperadas retornarão resultados explícitos; exceções ficam para falhas excepcionais.
-- Injeção de dependências seguirá a composition root existente quando criada. Interfaces serão usadas em fronteiras reais ou quando trouxerem substituição/testabilidade.
+- Injeção de dependências seguirá a composition root do host MAUI quando ele for criado. Interfaces serão usadas em fronteiras reais ou quando trouxerem substituição/testabilidade.
 - Regras detalhadas de C#, logging, segurança e gates compartilhados estão em specs/README.md.
 
 ## 3. FATIAS VERTICAIS DE IMPLEMENTAÇÃO (máximo 3)
@@ -127,7 +127,7 @@ O jogador consulta os valores que ainda podem ocupar uma célula vazia no estado
 Na solution existente, executar na raiz:
 
 - dotnet build --configuration Release --warnaserror
-- dotnet test --no-build após build bem-sucedido
+- dotnet test --no-build --configuration Release após build bem-sucedido
 - Compilar os targets Windows e Android quando workloads e SDKs estiverem configurados.
 
 Esses comandos se aplicam à `CageLogic.slnx` e aos projetos `net10.0` existentes. Builds dos targets Windows/Android dependem do host MAUI e dos workloads que serão introduzidos posteriormente.

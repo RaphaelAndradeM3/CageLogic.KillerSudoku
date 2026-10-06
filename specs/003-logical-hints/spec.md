@@ -116,7 +116,7 @@ O jogador pode avançar de uma explicação para um destaque mais direto e, por 
 Na solution existente, executar na raiz:
 
 - dotnet build --configuration Release --warnaserror
-- dotnet test --no-build após build bem-sucedido
+- dotnet test --no-build --configuration Release após build bem-sucedido
 - Compilar os targets Windows e Android quando workloads e SDKs estiverem configurados.
 
 Esses comandos se aplicam à `CageLogic.slnx` e aos projetos `net10.0` existentes. Builds dos targets Windows/Android dependem do host MAUI e dos workloads que serão introduzidos posteriormente.

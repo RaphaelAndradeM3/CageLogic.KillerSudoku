@@ -141,6 +141,19 @@ public sealed class LogicalTechniqueTests
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 3), 3)));
     }
 
+    [Test]
+    public async Task CageAssignmentCache_AllowsConcurrentAnalysisOfTheSameState()
+    {
+        var state = LogicalState.Create(PuzzleWithCages(([(0, 0), (0, 1)], 3)).CreateBoard());
+        var analyses = Enumerable.Range(0, 16)
+            .Select(_ => Task.Run(() => new CageSingleTechnique().FindStep(state)))
+            .ToArray();
+
+        var steps = await Task.WhenAll(analyses);
+
+        Assert.That(steps.All(step => step?.TechniqueId == LogicalTechniqueId.CageSingle), Is.True);
+    }
+
     private static ValidatedPuzzle OpenPuzzle()
     {
         var rows = Enumerable.Range(0, 9)

@@ -120,6 +120,8 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
         int seed,
         CancellationToken cancellationToken)
     {
+        var indexMap = ExpertPuzzleSymmetry.CreateIndexMap(seed);
+        var canonicalSolution = ExpertPuzzleSymmetry.InverseTransformSolution(solution, indexMap);
         var random = new Random(seed);
         var expertSingletons = ExpertSingletonIndexes.ToHashSet();
         var unassigned = Enumerable.Range(0, 81)
@@ -127,7 +129,7 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
             .ToHashSet();
         var cages = ExpertSingletonIndexes
             .Select(index => new CageDefinition(
-                solution[index],
+                canonicalSolution[index],
                 [new PuzzleDefinitionPosition(index / 9, index % 9)]))
             .ToList();
 
@@ -136,7 +138,7 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
             cancellationToken.ThrowIfCancellationRequested();
             var startIndex = unassigned.Order().ElementAt(random.Next(unassigned.Count));
             var chosen = new List<int> { startIndex };
-            var usedDigits = new HashSet<int> { solution[startIndex] };
+            var usedDigits = new HashSet<int> { canonicalSolution[startIndex] };
             var targetSize = random.Next(2, 9);
 
             while (chosen.Count < targetSize)
@@ -145,7 +147,7 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
                 var neighbors = chosen
                     .SelectMany(GetNeighborIndexes)
                     .Where(unassigned.Contains)
-                    .Where(index => !usedDigits.Contains(solution[index]))
+                    .Where(index => !usedDigits.Contains(canonicalSolution[index]))
                     .Distinct()
                     .Order()
                     .ToArray();
@@ -167,7 +169,7 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
 
                 var next = neighbors[random.Next(neighbors.Length)];
                 chosen.Add(next);
-                usedDigits.Add(solution[next]);
+                usedDigits.Add(canonicalSolution[next]);
             }
 
             foreach (var index in chosen)
@@ -178,10 +180,10 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
             var positions = chosen
                 .Select(index => new PuzzleDefinitionPosition(index / 9, index % 9))
                 .ToArray();
-            cages.Add(new CageDefinition(chosen.Sum(index => solution[index]), positions));
+            cages.Add(new CageDefinition(chosen.Sum(index => canonicalSolution[index]), positions));
         }
 
-        return new ReadOnlyCollection<CageDefinition>(cages);
+        return new ReadOnlyCollection<CageDefinition>(ExpertPuzzleSymmetry.TransformCages(cages, indexMap).ToArray());
     }
 
     private static IEnumerable<int> GetNeighborIndexes(int index)

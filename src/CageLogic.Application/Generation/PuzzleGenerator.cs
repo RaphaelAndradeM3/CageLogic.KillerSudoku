@@ -65,18 +65,24 @@ public sealed class PuzzleGenerator
                 var seed = request.Seed.HasValue
                     ? DeriveSeed(request.Seed.Value, attempt)
                     : RandomNumberGenerator.GetInt32(int.MinValue, int.MaxValue);
+                var partitionSeed = unchecked(seed ^ 0x5F3759DF);
 
                 var solutionValues = Measure(
                     attempt + 1,
                     PuzzleGenerationStage.SolvedGrid,
                     () => _solvedGridGenerator.Generate(seed, linkedCancellation.Token));
+                if (request.Difficulty == DifficultyLevel.Expert)
+                {
+                    solutionValues = ExpertPuzzleSymmetry.TransformSolution(solutionValues, partitionSeed);
+                }
+
                 var cages = Measure(
                     attempt + 1,
                     PuzzleGenerationStage.CagePartition,
                     () => _cagePartitionGenerator.Generate(
                         solutionValues,
                         request.Difficulty,
-                        unchecked(seed ^ 0x5F3759DF),
+                        partitionSeed,
                         linkedCancellation.Token));
                 var definition = new PuzzleDefinition(
                     givens: new Dictionary<PuzzleDefinitionPosition, int>(),
@@ -211,11 +217,7 @@ public sealed class PuzzleGenerator
 
         public void Dispose()
         {
-            using var callbacksComplete = new ManualResetEvent(initialState: false);
-            if (_timer.Dispose(callbacksComplete))
-            {
-                callbacksComplete.WaitOne();
-            }
+            _timer.Dispose();
         }
 
         private void OnTimer(object? state)

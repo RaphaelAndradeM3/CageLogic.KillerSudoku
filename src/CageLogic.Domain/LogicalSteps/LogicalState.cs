@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using CageLogic.Domain.Board;
 using CageLogic.Domain.Candidates;
@@ -10,7 +11,8 @@ public sealed class LogicalState
 {
     private readonly ReadOnlyCollection<CandidateSet> _candidateSets;
     private readonly Dictionary<CellPosition, CandidateSet> _candidateByPosition;
-    private readonly Dictionary<Cage, CageAssignmentSummary> _cageAssignments = new();
+    private readonly ConcurrentDictionary<Cage, CageAssignmentSummary> _cageAssignments = new();
+    private readonly ConcurrentDictionary<Cage, object> _cageAssignmentGates = new();
 
     public LogicalState(SudokuBoard board, IEnumerable<CandidateSet> candidates)
         : this(board, candidates, new CandidateCalculator())
@@ -95,12 +97,32 @@ public sealed class LogicalState
 
     internal CageAssignmentSummary GetCageAssignments(Cage cage, CancellationToken cancellationToken)
     {
-        if (!_cageAssignments.TryGetValue(cage, out var summary))
+        if (_cageAssignments.TryGetValue(cage, out var cached))
         {
-            summary = CageAssignmentSummary.Create(this, cage, cancellationToken);
-            _cageAssignments.Add(cage, summary);
+            return cached;
         }
 
-        return summary;
+        var gate = _cageAssignmentGates.GetOrAdd(cage, static _ => new object());
+        while (!Monitor.TryEnter(gate, millisecondsTimeout: 25))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (_cageAssignments.TryGetValue(cage, out cached))
+            {
+                return cached;
+            }
+
+            var summary = CageAssignmentSummary.Create(this, cage, cancellationToken);
+            _cageAssignments.TryAdd(cage, summary);
+            return summary;
+        }
+        finally
+        {
+            Monitor.Exit(gate);
+        }
     }
 }

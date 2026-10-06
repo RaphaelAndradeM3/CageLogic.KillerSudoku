@@ -71,7 +71,7 @@ public sealed class PuzzleGeneratorTests
         ];
         var request = new PuzzleGenerationRequest(
             DifficultyLevel.Expert,
-            new GenerationBudget(1, TimeSpan.FromSeconds(30)),
+            new GenerationBudget(32, TimeSpan.FromSeconds(30)),
             seed: unchecked(2 ^ 0x5F3759DF));
         var generator = new PuzzleGenerator(new FixedSolvedGridGenerator(solvedGrid));
 
@@ -189,6 +189,39 @@ public sealed class PuzzleGeneratorTests
             Throws.InstanceOf<OperationCanceledException>());
     }
 
+    [Test]
+    public void Generate_CancellationDuringGenerationThrowsWithoutPublishingUnavailable()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var generator = new PuzzleGenerator(
+            solvedGridGenerator: new CancellingSolvedGridGenerator(cancellation, waitForLinkedCancellation: false));
+        PuzzleGenerationResult? result = null;
+
+        Assert.That(
+            () => result = generator.Generate(Request(DifficultyLevel.Easy, seed: 12), cancellation.Token),
+            Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public void Generate_CallerCancellationWinsWhenDeadlineAlsoExpires()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var generator = new PuzzleGenerator(
+            solvedGridGenerator: new CancellingSolvedGridGenerator(cancellation, waitForLinkedCancellation: true));
+        var request = new PuzzleGenerationRequest(
+            DifficultyLevel.Easy,
+            new GenerationBudget(1, TimeSpan.FromMilliseconds(50)),
+            seed: 13);
+        PuzzleGenerationResult? result = null;
+
+        Assert.That(
+            () => result = generator.Generate(request, cancellation.Token),
+            Throws.InstanceOf<OperationCanceledException>());
+        Assert.That(cancellation.IsCancellationRequested, Is.True);
+        Assert.That(result, Is.Null);
+    }
+
     [TestCase(DifficultyLevel.Easy)]
     [TestCase(DifficultyLevel.Medium)]
     [TestCase(DifficultyLevel.Hard)]
@@ -210,6 +243,21 @@ public sealed class PuzzleGeneratorTests
             solution[position.Row * 9 + position.Column])), Is.True);
         Assert.That(cages.All(cage => cage.Positions.Select(position =>
             solution[position.Row * 9 + position.Column]).Distinct().Count() == cage.Positions.Count), Is.True);
+    }
+
+    [Test]
+    public void CagePartitionGenerator_ExpertSingletonPositionsVaryBySeedAndReplayDeterministically()
+    {
+        var solution = new SolvedGridGenerator().Generate(456);
+        var generator = new CagePartitionGenerator();
+
+        var first = generator.Generate(solution, DifficultyLevel.Expert, seed: 321);
+        var replay = generator.Generate(solution, DifficultyLevel.Expert, seed: 321);
+        var otherSeed = generator.Generate(solution, DifficultyLevel.Expert, seed: 322);
+
+        Assert.That(CagePartitionSignature(replay), Is.EqualTo(CagePartitionSignature(first)));
+        Assert.That(SingletonIndexes(replay), Is.EqualTo(SingletonIndexes(first)));
+        Assert.That(SingletonIndexes(otherSeed), Is.Not.EqualTo(SingletonIndexes(first)));
     }
 
     [Test]
@@ -249,6 +297,21 @@ public sealed class PuzzleGeneratorTests
             $"{cage.TargetSum}:{string.Join(',', cage.Positions.Select(position => $"{position.Row}-{position.Column}"))}"));
     }
 
+    private static string CagePartitionSignature(IEnumerable<CageDefinition> cages)
+    {
+        return string.Join("|", cages.Select(cage =>
+            $"{cage.TargetSum}:{string.Join(',', cage.Positions.Select(position => $"{position.Row}-{position.Column}"))}"));
+    }
+
+    private static int[] SingletonIndexes(IEnumerable<CageDefinition> cages)
+    {
+        return cages
+            .Where(cage => cage.Positions.Count == 1)
+            .Select(cage => cage.Positions[0].Row * 9 + cage.Positions[0].Column)
+            .Order()
+            .ToArray();
+    }
+
     private sealed class FixedDifficultyAnalyzer(DifficultyLevel level) : IDifficultyAnalyzer
     {
         public DifficultyAnalysisResult Analyze(ValidatedPuzzle puzzle, CancellationToken cancellationToken = default)
@@ -268,6 +331,23 @@ public sealed class PuzzleGeneratorTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             return values.ToArray();
+        }
+    }
+
+    private sealed class CancellingSolvedGridGenerator(
+        CancellationTokenSource callerCancellation,
+        bool waitForLinkedCancellation) : ISolvedGridGenerator
+    {
+        public IReadOnlyList<int> Generate(int seed, CancellationToken cancellationToken = default)
+        {
+            if (waitForLinkedCancellation)
+            {
+                cancellationToken.WaitHandle.WaitOne();
+            }
+
+            callerCancellation.Cancel();
+            cancellationToken.ThrowIfCancellationRequested();
+            return new SolvedGridGenerator().Generate(seed, cancellationToken);
         }
     }
 

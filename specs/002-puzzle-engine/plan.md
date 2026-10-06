@@ -16,7 +16,7 @@ Entregar resolução computacional, contagem de soluções limitada a duas, gera
 
 **Storage**: N/A. Geração e busca são locais e em memória.
 
-**Testing**: `CageLogic.Domain.Tests` e `CageLogic.Application.Tests`; fixtures determinísticos com NUnit. Validar `dotnet build --configuration Release --warnaserror` e, após build bem-sucedido, `dotnet test --no-build`.
+**Testing**: `CageLogic.Domain.Tests` e `CageLogic.Application.Tests`; fixtures determinísticos com NUnit. Validar `dotnet build --configuration Release --warnaserror` e, após build bem-sucedido, `dotnet test --no-build --configuration Release`.
 
 **Target Platform**: bibliotecas `net10.0`; uso posterior pelo app offline Windows/Android. O host MAUI e seus targets ainda não estão presentes nesta solution.
 

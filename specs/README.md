@@ -32,7 +32,7 @@ Multiplayer, login, nuvem, anúncios, monetização, iOS e publicação em lojas
 
 - Cada fatia precisa atravessar as partes necessárias para demonstrar o fluxo completo; agrupar contrato, regra, integração e teste do mesmo resultado. Não particionar tarefas por DTO/interface/repositório isolados.
 - Limitar cada feature a até três fatias descritas no seu spec. Manter referência à meta imutável e aos critérios de aceitação em cada etapa de implementação.
-- Quando existir solution, executar dotnet build --configuration Release --warnaserror e, após build bem-sucedido, dotnet test --no-build.
+- Quando existir solution, executar dotnet build --configuration Release --warnaserror e, após build bem-sucedido, dotnet test --no-build --configuration Release.
 - Executar builds dos targets Windows e Android após workloads serem configurados. Rodar testes focados e a suíte existente conforme projetos e convenções reais.
 - Usar filtro Category=Integration somente se a categoria for configurada no projeto. WebApplicationFactory não é pressuposto para um aplicativo MAUI offline.
 - `CageLogic.slnx`, as bibliotecas `CageLogic.Domain` e `CageLogic.Application` e os projetos NUnit de teste já existem em .NET 10. Eles cobrem a base implementada em 001; o host MAUI e os targets Windows/Android ainda não existem.
