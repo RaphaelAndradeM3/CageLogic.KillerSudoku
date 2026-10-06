@@ -2,22 +2,26 @@
 
 Aplicativo multiplataforma de **Killer Sudoku**, planejado em .NET 10 e .NET MAUI para Windows e Android. A proposta combina puzzles com solução única, validação durante a partida e dicas que explicam o raciocínio usado para avançar.
 
-> **Status:** o repositório está na fase de definição do produto e da arquitetura. No momento, contém documentação; ainda não há solução .NET nem aplicativo executável.
+> **Status:** as bibliotecas `CageLogic.Domain` e `CageLogic.Application` já incluem regras, candidatos, solver, geração de puzzles e análise de dificuldade, com testes NUnit em `net10.0`. As dicas, a sessão de jogo, a progressão e o host MAUI continuam em desenvolvimento; ainda não há aplicativo executável.
 
 ## Visão do projeto
 
 O CageLogic pretende oferecer uma experiência offline de Killer Sudoku para quem quer jogar e aprender técnicas de resolução. As dicas deverão priorizar explicações e destaques visuais, deixando a revelação direta de uma resposta como último recurso.
 
+## Recursos disponíveis nas bibliotecas
+
+- Gerar puzzles por dificuldade com seed, orçamento configurável e verificação de solução única.
+- Resolver puzzles e classificar dificuldade por uma trilha lógica reproduzível.
+
 ## Funcionalidades planejadas
 
-- Criar puzzles por dificuldade e verificar que cada um tenha solução única.
 - Inserir e apagar valores, usar candidatos e validar as regras do tabuleiro e das cages.
 - Desfazer e refazer jogadas e salvar a partida localmente para continuar depois.
 - Solicitar dicas progressivas com explicações de técnicas lógicas.
 - Registrar tempo, erros, dicas e estatísticas da partida.
 - Jogar offline em Windows e Android.
 
-Essas funcionalidades fazem parte da visão e dos requisitos do produto; ainda não estão implementadas.
+Dicas, sessão de jogo, progressão e aplicativo MAUI continuam planejados. Regras, validação, candidatos, resolução, geração e classificação de dificuldade já estão implementados nas bibliotecas .NET.
 
 ## Regras do jogo
 
@@ -61,11 +65,11 @@ As tecnologias acima são propostas na documentação e podem ser detalhadas dur
 
 ## Roadmap inicial
 
-1. Criar a solução, os projetos e os testes de domínio.
-2. Implementar validações, cages e cálculo de candidatos.
-3. Desenvolver solver e verificação de solução única.
+1. Criar a solução, os projetos e os testes de domínio. **Concluído.**
+2. Implementar validações, cages e cálculo de candidatos. **Concluído na base da feature 001.**
+3. Desenvolver solver e verificação de solução única. **Concluído nas bibliotecas Application.**
 4. Criar estratégias de dicas e explicações.
-5. Desenvolver o gerador e a classificação de dificuldade.
+5. Desenvolver o gerador e a classificação de dificuldade. **Concluído nas bibliotecas Application.**
 6. Construir a interface MAUI, persistência e experiência de jogo.
 
 ## Documentação
@@ -77,7 +81,7 @@ As tecnologias acima são propostas na documentação e podem ser detalhadas dur
 
 ## Executar
 
-Ainda não há uma solução ou projeto executável neste repositório. As instruções de instalação, compilação e execução serão adicionadas quando a aplicação for criada.
+As bibliotecas e seus testes podem ser compilados na raiz com `dotnet build CageLogic.slnx --configuration Release --warnaserror`; após um build bem-sucedido, execute `dotnet test CageLogic.slnx --no-build --configuration Release`. O aplicativo ainda não é executável porque o host MAUI não foi criado.
 
 ## Licença
 

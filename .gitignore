@@ -18,6 +18,7 @@
 mono_crash.*
 
 # Build results
+[Bb]in/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -65,6 +66,9 @@ Generated\ Files/
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 *.trx
+
+# NuGet packages
+packages/
 
 # NUnit
 *.VisualState.xml

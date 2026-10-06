@@ -58,7 +58,7 @@ O jogador pode avançar de uma explicação para um destaque mais direto e, por 
 - **FR-001**: O sistema MUST oferecer uma explicação antes de revelar diretamente uma resposta.
 - **FR-002**: O sistema MUST destacar as células e a posição-alvo relevantes para a técnica apresentada.
 - **FR-003**: O sistema MUST escolher primeiro a técnica mais simples disponível segundo uma ordem estável.
-- **FR-004**: O MVP MUST reconhecer pelo menos quatro técnicas lógicas documentadas, incluindo Single evidente, Single oculto, combinação de cage e interação de cage com região ou regra dos 45.
+- **FR-004**: O MVP MUST explicar todas as técnicas do catálogo v1 de dificuldade de 002: Naked Single, Hidden Single, Cage Single, Cage Combination, Cage/Region Intersection, Rule of 45, Naked Pair, Hidden Pair e Naked Triple.
 - **FR-005**: O sistema MUST garantir que toda sugestão corresponda a um passo válido no estado atual.
 - **FR-006**: O sistema MUST recusar sugestão de valor em estado inconsistente ou puzzle sem solução única confirmada.
 - **FR-007**: O sistema MUST informar quando não existe dica segura entre as técnicas disponíveis.
@@ -76,7 +76,7 @@ O jogador pode avançar de uma explicação para um destaque mais direto e, por 
 
 ### Measurable Outcomes
 
-- **SC-001**: O MVP reconhece pelo menos quatro técnicas e cada uma tem um cenário de aceitação demonstrável.
+- **SC-001**: As nove técnicas do catálogo v1 de 002 têm cenário de aceitação com explicação e posições relacionadas demonstráveis.
 - **SC-002**: 100% das dicas dos cenários de referência identificam a técnica, explicam o raciocínio e destacam as células relevantes.
 - **SC-003**: Nenhuma sugestão é apresentada como certa quando contradiz o estado válido ou a solução única do puzzle.
 - **SC-004**: Em todos os cenários de progressão, a resposta direta aparece apenas após os níveis explicativos e de destaque.
@@ -84,7 +84,7 @@ O jogador pode avançar de uma explicação para um destaque mais direto e, por 
 ## Assumptions
 
 - A linguagem das explicações será localizada inicialmente em português, consistente com a documentação do produto.
-- O conjunto de técnicas cresce de forma incremental; o MVP exige no mínimo quatro técnicas lógicas reconhecidas.
+- As deduções e IDs estáveis do catálogo v1 são compartilhados com Domain/002; o motor de dicas acrescenta explicações localizadas para cada uma das nove técnicas.
 - Se nenhuma técnica aplicável existir, o jogo oferece uma mensagem clara em vez de inventar uma dica.
 - Depende de 001-killer-sudoku-rules e de um puzzle válido e único fornecido por 002-puzzle-engine.
 
@@ -92,33 +92,34 @@ O jogador pode avançar de uma explicação para um destaque mais direto e, por 
 
 - **Camadas previstas afetadas**: Application para buscar e priorizar dicas; Domain para regras reutilizáveis; MAUI para explicações e destaques; testes de aplicação e domínio.
 - O motor de dicas permanece independente do solver computacional; pode usar seu resultado para validar uma sugestão, sem assumir a responsabilidade de resolver.
+- As deduções e os IDs estáveis são consumidos de `LogicalStep`/`LogicalState` do catálogo v1 de 002; a feature 003 fornece explicações e destaques, sem duplicar as regras nem confiar nas anotações manuais do jogador como prova.
 - Estratégias seguem o princípio extensível registrado na constituição do projeto. Uma interface é criada somente se representar essa fronteira útil.
 - Explicações e erros exibidos ao jogador não incluem stack trace nem detalhes internos.
 - Regras de C#, logging, segurança e gates compartilhados estão em specs/README.md.
 
 ## 3. FATIAS VERTICAIS DE IMPLEMENTAÇÃO (máximo 3)
 
-### Slice 1: Explicar técnicas básicas
-- **Escopo**: Encontrar passos simples, explicar a técnica e destacar alvo e contexto na partida.
+### Slice 1: Explicar singles
+- **Escopo**: Explicar Naked Single, Hidden Single e Cage Single, destacando alvo e contexto na partida.
 - **Validação local**: Conferir cenários conhecidos, explicação e células destacadas; compilar os projetos afetados.
 
 ### Slice 2: Explicar técnicas Killer Sudoku
-- **Escopo**: Incluir combinações de cage e interação de cage com região ou regra dos 45, mantendo prioridade determinística.
+- **Escopo**: Explicar Cage Combination, Cage/Region Intersection e Rule of 45, mantendo prioridade determinística.
 - **Validação local**: Comparar passos com estados de referência e verificar que cada explicação é consistente com candidatos.
 
-### Slice 3: Progressão segura até a resposta
-- **Escopo**: Integrar níveis progressivos à interface e revelar valor somente no último nível, quando o puzzle for único.
+### Slice 3: Explicar técnicas avançadas e progredir até a resposta
+- **Escopo**: Explicar Naked Pair, Hidden Pair e Naked Triple; integrar níveis progressivos e revelar valor somente no último nível, quando o puzzle for único.
 - **Validação local**: Exercitar dica inexistente, estado inconsistente, atualização entre pedidos e revelação direta final.
 
 ## 4. GATES DE VALIDAÇÃO (.NET Toolchain)
 
-Quando a solution existir, executar na raiz:
+Na solution existente, executar na raiz:
 
 - dotnet build --configuration Release --warnaserror
-- dotnet test --no-build após build bem-sucedido
+- dotnet test --no-build --configuration Release após build bem-sucedido
 - Compilar os targets Windows e Android quando workloads e SDKs estiverem configurados.
 
-Os comandos ainda não podem ser executados: o repositório contém apenas documentação e não possui solution ou projetos.
+Esses comandos se aplicam à `CageLogic.slnx` e aos projetos `net10.0` existentes. Builds dos targets Windows/Android dependem do host MAUI e dos workloads que serão introduzidos posteriormente.
 
 ## 5. INSTRUÇÕES DE EXECUÇÃO PARA O AGENTE (Agent Guardrails)
 

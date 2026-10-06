@@ -4,7 +4,7 @@ using CageLogic.Domain.Cages;
 namespace CageLogic.Domain.Candidates;
 
 /// <summary>Calculates candidates from current row, column, block, and cage restrictions only.</summary>
-public sealed class CandidateCalculator
+public sealed class CandidateCalculator : ICandidateCalculator
 {
     public IReadOnlyList<CandidateSet> Calculate(SudokuBoard board)
     {
