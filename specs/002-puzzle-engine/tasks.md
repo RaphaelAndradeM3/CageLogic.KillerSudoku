@@ -185,3 +185,8 @@ Task: T022 Implement RuleOf45Technique in src/CageLogic.Domain/LogicalSteps/Tech
 - `[US1]`/`[US2]` map directly to the P1 stories in `spec.md`.
 - Tests are present because the feature specification explicitly requires reference fixtures and validation scenarios; this task-generation run did not execute them.
 - No new project, NuGet package, API contract folder, or MAUI host is created by this feature plan.
+
+## Phase 6: Convergence
+
+- [ ] T041 Tune the default cage partitioner and add a bounded, fixed-seed end-to-end Expert generation fixture using the real `SudokuSolver` and `DifficultyAnalyzer`; assert a unique puzzle with zero givens and Expert classification, per US2/AC1, FR-006, and SC-003 (partial; closes T040).
+- [ ] T042 Select the minimum supported Android target and run the fixed Release generation corpus on that target and Windows; record stage and request latency, cancellation, device/runtime, and results, then set measured configurable production budgets, per FR-011, SC-006, and the plan performance gate (partial; closes T037).
