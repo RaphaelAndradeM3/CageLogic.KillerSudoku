@@ -23,6 +23,14 @@ O caso de uso recebe um snapshot imutável e não mantém estado de progresso en
 
 O Domain recalcula candidatos a partir do snapshot. Anotações manuais de candidatos da interface não alteram a dedução.
 
+## Campos de `HintResult`
+
+- `BoardRevision` e `Status` identificam o snapshot e o resultado explícito.
+- `TechniqueId`, `TechniqueName` e `Explanation` identificam a primeira técnica aplicável e seu texto localizado.
+- `Highlights` é um mapa imutável de `HintHighlightRole` para posições: `Pattern` identifica o padrão, `Scope` a região/cage de apoio, `Target` o alvo de uma colocação e `Affected` as células das eliminações.
+- `InvolvedCandidates` contém pares posição/dígito relevantes para um passo de eliminação sem classificá-los como removíveis.
+- `Action` fica nula antes do nível 3. No nível 3 é exatamente `HintAction.PlaceValue(Position, Value)` ou `HintAction.RemoveCandidates(Candidates)`; a lista de remoções é não vazia, distinta e ordenada row-major por posição e depois por dígito.
+
 ## Resultado
 
 Todo `HintResult` ecoa `BoardRevision` e tem um `HintStatus` explícito:
@@ -37,13 +45,13 @@ Para `Available`, o conteúdo segue estas regras:
 
 | Nível | Conteúdo |
 |---|---|
-| 1 | ID/nome da técnica e explicação em português. Não inclui posição, dígito ou ação concreta. |
-| 2 | Nível 1 mais posições e candidatos envolvidos destacados por papéis tipados. Não declara que um dígito deve ser colocado ou que candidatos devem ser removidos. |
-| 3 | Níveis anteriores mais exatamente uma ação: colocar um valor ou remover uma lista não vazia de candidatos. |
+| 1 | ID/nome da técnica e explicação em português. `Highlights`, `InvolvedCandidates` e `Action` ficam vazios/nulos. |
+| 2 | Nível 1 mais `Highlights` e candidatos envolvidos. Não declara que um dígito deve ser colocado ou que candidatos devem ser removidos. |
+| 3 | Níveis anteriores mais exatamente uma ação tipada: `PlaceValue` ou `RemoveCandidates`. |
 
 Uma técnica de eliminação pode ser avançada até o nível 3 sem produzir colocação: sua ação é `RemoveCandidates`. Uma colocação só pode ser divulgada no nível 3 quando a multiplicidade do puzzle original for `Unique` e o valor coincidir com a solução confirmada. A unicidade de uma busca restrita às jogadas atuais não altera a multiplicidade original.
 
-Se a origem tem multiplicidade `Multiple` e as jogadas atuais eliminam todas as soluções, o resultado é `InconsistentState`. Se as jogadas atuais deixam uma única solução, isso não confirma a unicidade do puzzle original: uma solicitação de colocação no nível 3 retorna `ValueNotConfirmed` sem valor.
+Se a origem tem multiplicidade `Multiple` e as jogadas atuais eliminam todas as soluções, o resultado é `InconsistentState`. Se as jogadas atuais deixam uma única solução, isso não confirma a unicidade do puzzle original: uma solicitação de colocação no nível 3 retorna `ValueNotConfirmed` sem valor. Uma ação de eliminação continua disponível porque não coloca um valor.
 
 `PuzzleSolved`, `InconsistentState`, `NoSafeHint` e `ValueNotConfirmed` não carregam ação. O caso de uso não transforma cancelamento ou falhas inesperadas em estados de dica.
 

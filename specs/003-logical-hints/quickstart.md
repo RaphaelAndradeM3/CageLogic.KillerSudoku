@@ -10,7 +10,7 @@
 
 1. Adicionar `LogicalStepEvidence` no Domain e preencher a evidência nas nove estratégias existentes. Manter texto localizado fora do Domain.
 2. Criar o catálogo de explicações e `GetHintUseCase` na Application. Aplicar validação de estrutura, conflitos, estado resolvido e compatibilidade das jogadas com o puzzle original antes de projetar uma dica.
-3. Testar projeções: nível 1 só apresenta técnica/explicação; nível 2 apresenta papéis de posição e candidatos envolvidos, sem declarar a ação; nível 3 apresenta colocação confirmada ou candidatos a remover.
+3. Testar projeções: nível 1 só apresenta técnica/explicação; nível 2 preenche `Highlights` (`Pattern`, `Scope`, `Target`, `Affected`) e `InvolvedCandidates` sem declarar a ação; nível 3 preenche `Action` como `PlaceValue` confirmada ou `RemoveCandidates` ordenada.
 4. Implementar a sessão consumidora conforme `004-game-session` FR-013/SC-005: enviar snapshot/revisão, descartar resultados obsoletos, solicitar novamente o snapshot atual desde o nível 1 e exibir apenas resultado da revisão atual ou `NoSafeHint`. Registrar `GetHintUseCase` e dependências no composition root MAUI real da fatia 3 de 004; não criar composition root para as bibliotecas de 003.
 
 ## Validação focada

@@ -89,14 +89,14 @@ Cada tarefa usa `- [ ] Tnnn [P?] [US#?] Descrição com caminho exato`. `[P]` in
 
 ### Testes da User Story 2
 
-- [ ] T027 [US2] Ampliar `tests/CageLogic.Application.Tests/Hints/GetHintUseCaseTests.cs` com testes para projeção dos níveis 1–3, papéis de destaque e candidatos envolvidos, ações `PlaceValue`/`RemoveCandidates`, `ValueNotConfirmed` quando a origem é `Multiple` mesmo se o estado restrito tiver solução única, revisão ecoada e cancelamento.
+- [x] T027 [US2] Ampliar `tests/CageLogic.Application.Tests/Hints/GetHintUseCaseTests.cs` com testes para projeção dos níveis 1–3, papéis de destaque e candidatos envolvidos, ações `PlaceValue`/`RemoveCandidates`, `ValueNotConfirmed` quando a origem é `Multiple` mesmo se o estado restrito tiver solução única, revisão ecoada e cancelamento.
 
 ### Implementação da User Story 2
 
-- [ ] T028 [P] [US2] Criar a união discriminada `HintAction` em `src/CageLogic.Application/Hints/HintAction.cs` com exatamente `PlaceValue` ou `RemoveCandidates`; exigir lista de remoções não vazia, ordenada row-major por posição e por dígito crescente.
-- [ ] T029 [P] [US2] Acrescentar a `HintResult` em `src/CageLogic.Application/Hints/HintResult.cs` destaques imutáveis de posições por papel e pares posição/dígito envolvidos, sem declarar remoção no nível 2.
-- [ ] T030 [US2] Estender `GetHintUseCase` em `src/CageLogic.Application/Hints/GetHintUseCase.cs`: nível 2 inclui somente destaques; nível 3 inclui exatamente `PlaceValue` ou `RemoveCandidates`; recusar valor com `ValueNotConfirmed` se o puzzle original não for único, sem bloquear ação de eliminação; manter nível 1 sem posições/dígitos/ação e ecoar a revisão em todos os status.
-- [ ] T031 [US2] Executar os testes focados da progressão em `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~GetHintUseCaseTests` após T028–T030.
+- [x] T028 [P] [US2] Criar a união discriminada `HintAction` em `src/CageLogic.Application/Hints/HintAction.cs` com exatamente `PlaceValue` ou `RemoveCandidates`; exigir lista de remoções não vazia, ordenada row-major por posição e por dígito crescente.
+- [x] T029 [P] [US2] Acrescentar a `HintResult` em `src/CageLogic.Application/Hints/HintResult.cs` destaques imutáveis de posições por papel e pares posição/dígito envolvidos, sem declarar remoção no nível 2.
+- [x] T030 [US2] Estender `GetHintUseCase` em `src/CageLogic.Application/Hints/GetHintUseCase.cs`: nível 2 inclui somente destaques; nível 3 inclui exatamente `PlaceValue` ou `RemoveCandidates`; recusar valor com `ValueNotConfirmed` se o puzzle original não for único, sem bloquear ação de eliminação; manter nível 1 sem posições/dígitos/ação e ecoar a revisão em todos os status.
+- [x] T031 [US2] Executar os testes focados da progressão em `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~GetHintUseCaseTests` após T028–T030.
 
 **Checkpoint**: as três projeções respeitam a ordem de revelação e as restrições de segurança para valores.
 

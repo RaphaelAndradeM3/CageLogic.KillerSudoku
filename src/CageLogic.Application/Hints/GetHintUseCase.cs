@@ -80,12 +80,48 @@ public sealed class GetHintUseCase
         }
 
         var explanation = _catalog.Get(step.TechniqueId);
+        if (request.Level == HintLevel.Action)
+        {
+            if (step.Placement is { } placement)
+            {
+                if (context.Multiplicity != SolutionMultiplicity.Unique)
+                {
+                    return Terminal(revision, HintStatus.ValueNotConfirmed);
+                }
+
+                if (context.UniqueSolution!.GetValue(placement.Position) != placement.Value)
+                {
+                    return Terminal(revision, HintStatus.InconsistentState);
+                }
+            }
+            else if (context.Multiplicity == SolutionMultiplicity.Unique &&
+                     step.Eliminations.Any(elimination =>
+                         context.UniqueSolution!.GetValue(elimination.Position) == elimination.Value))
+            {
+                return Terminal(revision, HintStatus.InconsistentState);
+            }
+        }
+
+        var includesHighlights = request.Level is HintLevel.Highlights or HintLevel.Action;
+        var highlights = includesHighlights ? CreateHighlights(step) : null;
+        var involvedCandidates = includesHighlights
+            ? step.Eliminations.Select(elimination => new HintCandidateReference(elimination.Position, elimination.Value)).ToArray()
+            : Array.Empty<HintCandidateReference>();
+        HintAction? action = request.Level == HintLevel.Action
+            ? step.Placement is { } actionPlacement
+                ? new HintAction.PlaceValue(actionPlacement.Position, actionPlacement.Value)
+                : new HintAction.RemoveCandidates(involvedCandidates)
+            : null;
+
         return new HintResult(
             revision,
             HintStatus.Available,
             step.TechniqueId,
             explanation.Name,
-            explanation.Explanation);
+            explanation.Explanation,
+            highlights,
+            involvedCandidates,
+            action);
     }
 
     private bool HasCompatibleSolution(
@@ -124,6 +160,31 @@ public sealed class GetHintUseCase
         return board.Cells
             .Where(cell => cell.CurrentValue.HasValue)
             .All(cell => cell.CurrentValue == solution.GetValue(cell.Position));
+    }
+
+    private static IReadOnlyDictionary<HintHighlightRole, IReadOnlyList<CellPosition>> CreateHighlights(LogicalStep step)
+    {
+        var highlights = new Dictionary<HintHighlightRole, IReadOnlyList<CellPosition>>
+        {
+            [HintHighlightRole.Pattern] = step.Evidence!.PatternPositions
+        };
+        if (step.Evidence.ScopePositions.Count > 0)
+        {
+            highlights[HintHighlightRole.Scope] = step.Evidence.ScopePositions;
+        }
+
+        if (step.Placement is { } placement)
+        {
+            highlights[HintHighlightRole.Target] = [placement.Position];
+        }
+
+        var affected = step.Eliminations.Select(elimination => elimination.Position).Distinct().ToArray();
+        if (affected.Length > 0)
+        {
+            highlights[HintHighlightRole.Affected] = affected;
+        }
+
+        return highlights;
     }
 
     private static HintResult Terminal(long revision, HintStatus status) => new(revision, status);

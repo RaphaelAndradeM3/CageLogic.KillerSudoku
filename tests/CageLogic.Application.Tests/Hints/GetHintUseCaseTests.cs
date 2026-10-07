@@ -110,9 +110,211 @@ public sealed class GetHintUseCaseTests
             Assert.That(result.TechniqueId, Is.EqualTo(expectedTechniqueId));
             Assert.That(result.TechniqueName, Is.EqualTo(catalogEntry.Name));
             Assert.That(result.Explanation, Is.EqualTo(catalogEntry.Explanation));
+            Assert.That(result.Highlights, Is.Empty);
+            Assert.That(result.InvolvedCandidates, Is.Empty);
+            Assert.That(result.Action, Is.Null);
             Assert.That(expectedStep.Evidence, Is.Not.Null);
             Assert.That(expectedStep.RelatedPositions, Is.Not.Empty);
             Assert.That(expectedStep.Placement.HasValue || expectedStep.Eliminations.Count > 0, Is.True);
+        });
+    }
+
+    [TestCaseSource(nameof(TechniqueVectors))]
+    public async Task GetHintUseCase_ProjectsExactReferenceEvidenceAtLevelTwo(
+        LogicalTechniqueId expectedTechniqueId,
+        LogicalStep expectedStep)
+    {
+        var puzzle = CreateUniquePuzzle();
+        var context = new HintPuzzleContext(puzzle, SolutionMultiplicity.Unique, CreateSolution(puzzle));
+        var request = new HintRequest(context, puzzle.CreateBoard(), HintLevel.Highlights, boardRevision: 43);
+
+        var result = await new GetHintUseCase(new FixedAnalyzer(expectedStep)).ExecuteAsync(request);
+        var evidence = expectedStep.Evidence!;
+        var expectedAffected = expectedStep.Eliminations.Select(elimination => elimination.Position).Distinct().OrderBy(position => position.Row * 9 + position.Column).ToArray();
+        var expectedCandidates = expectedStep.Eliminations.Select(elimination => new HintCandidateReference(elimination.Position, elimination.Value)).ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.TechniqueId, Is.EqualTo(expectedTechniqueId));
+            Assert.That(result.BoardRevision, Is.EqualTo(43));
+            Assert.That(result.Highlights[HintHighlightRole.Pattern], Is.EqualTo(evidence.PatternPositions));
+            Assert.That(result.Highlights.ContainsKey(HintHighlightRole.Scope), Is.EqualTo(evidence.ScopePositions.Count > 0));
+            if (evidence.ScopePositions.Count > 0)
+            {
+                Assert.That(result.Highlights[HintHighlightRole.Scope], Is.EqualTo(evidence.ScopePositions));
+            }
+
+            Assert.That(result.Highlights.ContainsKey(HintHighlightRole.Target), Is.EqualTo(expectedStep.Placement.HasValue));
+            if (expectedStep.Placement is { } placement)
+            {
+                Assert.That(result.Highlights[HintHighlightRole.Target], Is.EqualTo(new[] { placement.Position }));
+            }
+
+            Assert.That(result.Highlights.ContainsKey(HintHighlightRole.Affected), Is.EqualTo(expectedAffected.Length > 0));
+            if (expectedAffected.Length > 0)
+            {
+                Assert.That(result.Highlights[HintHighlightRole.Affected], Is.EqualTo(expectedAffected));
+            }
+
+            Assert.That(result.InvolvedCandidates, Is.EqualTo(expectedCandidates));
+            Assert.That(result.Action, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task GetHintUseCase_ProgressesPlacementFromExplanationToHighlightsToConfirmedAction()
+    {
+        var puzzle = CreateUniquePuzzle();
+        var solution = CreateSolution(puzzle);
+        var target = new CellPosition(0, 0);
+        var step = new LogicalStep(
+            LogicalTechniqueId.NakedSingle,
+            new LogicalPlacement(target, solution.GetValue(target)),
+            evidence: new LogicalStepEvidence([target], relevantDigits: [solution.GetValue(target)]));
+        var context = new HintPuzzleContext(puzzle, SolutionMultiplicity.Unique, solution);
+        var useCase = new GetHintUseCase(new FixedAnalyzer(step));
+
+        var explanation = await useCase.ExecuteAsync(new HintRequest(context, puzzle.CreateBoard(), HintLevel.Explanation, 50));
+        var highlights = await useCase.ExecuteAsync(new HintRequest(context, puzzle.CreateBoard(), HintLevel.Highlights, 50));
+        var action = await useCase.ExecuteAsync(new HintRequest(context, puzzle.CreateBoard(), HintLevel.Action, 50));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(explanation.Highlights, Is.Empty);
+            Assert.That(explanation.InvolvedCandidates, Is.Empty);
+            Assert.That(explanation.Action, Is.Null);
+            Assert.That(highlights.Highlights[HintHighlightRole.Target], Is.EqualTo(new[] { target }));
+            Assert.That(highlights.InvolvedCandidates, Is.Empty);
+            Assert.That(highlights.Action, Is.Null);
+            Assert.That(action.Action, Is.TypeOf<HintAction.PlaceValue>());
+            var place = (HintAction.PlaceValue)action.Action!;
+            Assert.That(place.Position, Is.EqualTo(target));
+            Assert.That(place.Value, Is.EqualTo(solution.GetValue(target)));
+            Assert.That(action.BoardRevision, Is.EqualTo(50));
+        });
+    }
+
+    [Test]
+    public async Task GetHintUseCase_ProgressesEliminationWithoutTurningItIntoAPlacement()
+    {
+        var puzzle = CreateMultiplePuzzle();
+        var pattern = new[] { new CellPosition(0, 0), new CellPosition(0, 1) };
+        var scope = Enumerable.Range(0, 9).Select(column => new CellPosition(0, column)).ToArray();
+        var eliminations = new[]
+        {
+            new CandidateElimination(new CellPosition(0, 2), 1),
+            new CandidateElimination(new CellPosition(0, 2), 2),
+            new CandidateElimination(new CellPosition(0, 3), 1)
+        };
+        var step = new LogicalStep(
+            LogicalTechniqueId.NakedPair,
+            eliminations: eliminations,
+            evidence: new LogicalStepEvidence(pattern, scope, [1, 2], LogicalScopeContext.ForRegion(LogicalScopeKind.Row, 0)));
+        var context = new HintPuzzleContext(puzzle, SolutionMultiplicity.Multiple, uniqueSolution: null);
+        var useCase = new GetHintUseCase(new FixedAnalyzer(step));
+
+        var highlights = await useCase.ExecuteAsync(new HintRequest(context, puzzle.CreateBoard(), HintLevel.Highlights, 51));
+        var action = await useCase.ExecuteAsync(new HintRequest(context, puzzle.CreateBoard(), HintLevel.Action, 51));
+        var expected = new[]
+        {
+            new HintCandidateReference(new CellPosition(0, 2), 1),
+            new HintCandidateReference(new CellPosition(0, 2), 2),
+            new HintCandidateReference(new CellPosition(0, 3), 1)
+        };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(highlights.Highlights[HintHighlightRole.Pattern], Is.EqualTo(pattern));
+            Assert.That(highlights.Highlights[HintHighlightRole.Scope], Is.EqualTo(scope));
+            Assert.That(highlights.Highlights[HintHighlightRole.Affected], Is.EqualTo(new[] { new CellPosition(0, 2), new CellPosition(0, 3) }));
+            Assert.That(highlights.InvolvedCandidates, Is.EqualTo(expected));
+            Assert.That(highlights.Action, Is.Null);
+            Assert.That(action.Action, Is.TypeOf<HintAction.RemoveCandidates>());
+            Assert.That(((HintAction.RemoveCandidates)action.Action!).Candidates, Is.EqualTo(expected));
+            Assert.That(action.BoardRevision, Is.EqualTo(51));
+        });
+    }
+
+    [Test]
+    public async Task GetHintUseCase_DoesNotConfirmPlacementFromMultipleOriginEvenWhenRestrictedSnapshotIsUnique()
+    {
+        var puzzle = CreateMultiplePuzzle();
+        var solution = CreateStandardSolution(puzzle);
+        var target = new CellPosition(8, 8);
+        var board = puzzle.CreateBoard();
+        foreach (var cell in board.Cells.Where(cell => cell.Position != target))
+        {
+            board = board.WithPlayerValue(cell.Position, solution.GetValue(cell.Position));
+        }
+
+        var step = new LogicalStep(
+            LogicalTechniqueId.NakedSingle,
+            new LogicalPlacement(target, solution.GetValue(target)),
+            evidence: new LogicalStepEvidence([target], relevantDigits: [solution.GetValue(target)]));
+        var context = new HintPuzzleContext(puzzle, SolutionMultiplicity.Multiple, uniqueSolution: null);
+        var request = new HintRequest(context, board, HintLevel.Action, boardRevision: 52);
+
+        var result = await new GetHintUseCase(new FixedAnalyzer(step)).ExecuteAsync(request);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Status, Is.EqualTo(HintStatus.ValueNotConfirmed));
+            Assert.That(result.BoardRevision, Is.EqualTo(52));
+            Assert.That(result.Action, Is.Null);
+            Assert.That(result.Highlights, Is.Empty);
+            Assert.That(result.InvolvedCandidates, Is.Empty);
+        });
+    }
+
+    [Test]
+    public async Task GetHintUseCase_RejectsLevelThreeActionThatContradictsConfirmedUniqueSolution()
+    {
+        var puzzle = CreateUniquePuzzle();
+        var solution = CreateSolution(puzzle);
+        var context = new HintPuzzleContext(puzzle, SolutionMultiplicity.Unique, solution);
+        var board = puzzle.CreateBoard();
+        var target = new CellPosition(0, 0);
+        var wrongPlacement = new LogicalStep(
+            LogicalTechniqueId.NakedSingle,
+            new LogicalPlacement(target, solution.GetValue(target) == 9 ? 1 : solution.GetValue(target) + 1),
+            evidence: new LogicalStepEvidence([target], relevantDigits: [1]));
+        var wrongElimination = new LogicalStep(
+            LogicalTechniqueId.CageCombination,
+            eliminations: [new CandidateElimination(target, solution.GetValue(target))],
+            evidence: new LogicalStepEvidence([target], relevantDigits: [solution.GetValue(target)]));
+        var useCases = new[] { new GetHintUseCase(new FixedAnalyzer(wrongPlacement)), new GetHintUseCase(new FixedAnalyzer(wrongElimination)) };
+
+        foreach (var useCase in useCases)
+        {
+            var result = await useCase.ExecuteAsync(new HintRequest(context, board, HintLevel.Action, boardRevision: 53));
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Status, Is.EqualTo(HintStatus.InconsistentState));
+                Assert.That(result.BoardRevision, Is.EqualTo(53));
+                Assert.That(result.Action, Is.Null);
+            });
+        }
+    }
+
+    [Test]
+    public void HintAction_RemoveCandidatesNormalizesOrderAndRejectsEmptyInput()
+    {
+        var action = new HintAction.RemoveCandidates(
+        [
+            new HintCandidateReference(new CellPosition(1, 0), 3),
+            new HintCandidateReference(new CellPosition(0, 2), 2),
+            new HintCandidateReference(new CellPosition(0, 2), 1)
+        ]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(action.Candidates, Is.EqualTo(new[]
+            {
+                new HintCandidateReference(new CellPosition(0, 2), 1),
+                new HintCandidateReference(new CellPosition(0, 2), 2),
+                new HintCandidateReference(new CellPosition(1, 0), 3)
+            }));
+            Assert.Throws<ArgumentException>(() => new HintAction.RemoveCandidates([]));
         });
     }
 
