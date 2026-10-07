@@ -21,11 +21,31 @@ public sealed class HiddenSingleTechnique : ILogicalTechnique
                     .ToArray();
                 if (positions.Length == 1)
                 {
-                    steps.Add(new LogicalStep(Id, new LogicalPlacement(positions[0], digit)));
+                    steps.Add(new LogicalStep(
+                        Id,
+                        new LogicalPlacement(positions[0], digit),
+                        evidence: new LogicalStepEvidence(
+                            [positions[0]],
+                            region.Positions,
+                            [digit],
+                            CreateRegionContext(region.Index),
+                            [new LogicalPatternCandidate(positions[0], digit)])));
                 }
             }
         }
 
         return LogicalStepOrdering.SelectBest(steps);
+    }
+
+    private static LogicalScopeContext CreateRegionContext(int regionIndex)
+    {
+        var regionKind = regionIndex switch
+        {
+            < 9 => LogicalScopeKind.Row,
+            < 18 => LogicalScopeKind.Column,
+            _ => LogicalScopeKind.Block
+        };
+        var localIndex = regionIndex < 9 ? regionIndex : regionIndex < 18 ? regionIndex - 9 : regionIndex - 18;
+        return LogicalScopeContext.ForRegion(regionKind, localIndex);
     }
 }

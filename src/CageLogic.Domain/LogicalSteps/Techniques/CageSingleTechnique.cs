@@ -24,7 +24,13 @@ public sealed class CageSingleTechnique : ILogicalTechnique
                     steps.Add(new LogicalStep(
                         Id,
                         new LogicalPlacement(position, values.Single()),
-                        relatedPositions: cage.Positions));
+                        relatedPositions: cage.Positions,
+                        evidence: new LogicalStepEvidence(
+                            cage.Positions,
+                            cage.Positions,
+                            [values.Single()],
+                            LogicalScopeContext.ForCage(cage.TargetSum),
+                            [new LogicalPatternCandidate(position, values.Single())])));
                 }
             }
         }

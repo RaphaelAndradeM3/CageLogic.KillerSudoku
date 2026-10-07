@@ -10,7 +10,8 @@ public sealed class LogicalStep
         LogicalTechniqueId techniqueId,
         LogicalPlacement? placement = null,
         IEnumerable<CandidateElimination>? eliminations = null,
-        IEnumerable<CellPosition>? relatedPositions = null)
+        IEnumerable<CellPosition>? relatedPositions = null,
+        LogicalStepEvidence? evidence = null)
     {
         if (!Enum.IsDefined(techniqueId))
         {
@@ -29,9 +30,12 @@ public sealed class LogicalStep
 
         TechniqueId = techniqueId;
         Placement = placement;
+        Evidence = evidence;
         Eliminations = new ReadOnlyCollection<CandidateElimination>(eliminationArray);
         RelatedPositions = new ReadOnlyCollection<CellPosition>(
             (relatedPositions ?? Array.Empty<CellPosition>())
+            .Concat(evidence?.PatternPositions ?? Array.Empty<CellPosition>())
+            .Concat(evidence?.ScopePositions ?? Array.Empty<CellPosition>())
             .Concat(placement.HasValue ? [placement.Value.Position] : Array.Empty<CellPosition>())
             .Concat(eliminationArray.Select(elimination => elimination.Position))
             .Distinct()
@@ -42,6 +46,9 @@ public sealed class LogicalStep
     public LogicalTechniqueId TechniqueId { get; }
 
     public LogicalPlacement? Placement { get; }
+
+    /// <summary>Typed explanation evidence, populated by catalog strategies used for progressive hints.</summary>
+    public LogicalStepEvidence? Evidence { get; }
 
     public IReadOnlyList<CandidateElimination> Eliminations { get; }
 

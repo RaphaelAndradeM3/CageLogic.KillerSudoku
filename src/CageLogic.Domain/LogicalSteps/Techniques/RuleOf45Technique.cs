@@ -84,7 +84,22 @@ public sealed class RuleOf45Technique : ILogicalTechnique
 
             if (eliminations.Count > 0)
             {
-                steps.Add(new LogicalStep(Id, eliminations: eliminations, relatedPositions: region.Positions));
+                var regionKind = GetRegionKind(region.Index);
+                var regionLocalIndex = GetRegionLocalIndex(region.Index);
+                var relatedCages = containedCages.Concat(crossingCages).ToArray();
+                steps.Add(new LogicalStep(
+                    Id,
+                    eliminations: eliminations,
+                    relatedPositions: region.Positions,
+                    evidence: new LogicalStepEvidence(
+                        crossingCages.SelectMany(cage => cage.Positions),
+                        region.Positions.Concat(crossingCages.SelectMany(cage => cage.Positions)),
+                        eliminations.Select(elimination => elimination.Value),
+                        LogicalScopeContext.ForRuleOf45(
+                            regionKind,
+                            regionLocalIndex,
+                            residual,
+                            relatedCages.Select(cage => cage.TargetSum)))));
             }
         }
 
@@ -121,4 +136,17 @@ public sealed class RuleOf45Technique : ILogicalTechnique
 
         return false;
     }
+
+    private static LogicalScopeKind GetRegionKind(int regionIndex) => regionIndex switch
+    {
+        < 9 => LogicalScopeKind.Row,
+        < 18 => LogicalScopeKind.Column,
+        _ => LogicalScopeKind.Block
+    };
+
+    private static int GetRegionLocalIndex(int regionIndex) => regionIndex < 9
+        ? regionIndex
+        : regionIndex < 18
+            ? regionIndex - 9
+            : regionIndex - 18;
 }

@@ -43,6 +43,7 @@ O jogador pode usar candidatos, corrigir ações e compreender o fim da partida.
 2. **Given** uma ação reversível, **When** o jogador desfaz ou refaz, **Then** o tabuleiro retorna exatamente ao estado anterior ou posterior.
 3. **Given** uma partida em andamento, **When** o jogador pausa e retoma, **Then** o cronômetro acompanha o tempo ativo da partida.
 4. **Given** todas as células estão corretas, **When** o puzzle é concluído, **Then** a partida termina e um resumo é apresentado.
+5. **Given** uma dica foi calculada para a revisão `r` e uma jogada altera o tabuleiro antes da exibição, **When** a resposta da revisão `r` chega, **Then** a sessão a descarta, solicita uma nova análise do snapshot atual desde o nível 1 e exibe somente o resultado da revisão atual ou a mensagem de que não há dica segura.
 
 ### Edge Cases
 
@@ -51,6 +52,7 @@ O jogador pode usar candidatos, corrigir ações e compreender o fim da partida.
 - Alternar modo candidato/resposta sem substituir conteúdo incorretamente.
 - Pausa, suspensão do app, rotação/redimensionamento e retorno do segundo plano.
 - Entrada simultânea ou repetida enquanto uma operação de geração/dica está ocupada.
+- Uma jogada ocorre enquanto uma dica está sendo calculada; resultado associado a revisão anterior nunca pode ser exibido.
 - Falha de desenho ou tentativa de entrada fora da grade não altera regras do jogo.
 
 ## Requirements *(mandatory)*
@@ -69,6 +71,7 @@ O jogador pode usar candidatos, corrigir ações e compreender o fim da partida.
 - **FR-010**: O sistema MUST reconhecer a conclusão somente quando todos os valores estiverem corretos e apresentar resumo da partida.
 - **FR-011**: O sistema MUST manter a interface responsiva durante validação, candidatos e dicas.
 - **FR-012**: O sistema MUST oferecer controles acessíveis por toque em Android e por mouse/teclado em Windows.
+- **FR-013**: A sessão MUST manter uma `BoardRevision` monotônica e associar cada pedido de dica ao snapshot dessa revisão. Antes de exibir o resultado, MUST compará-la com a revisão atual; se estiver obsoleta, MUST descartá-lo, cancelar o pedido anterior quando possível e solicitar uma nova dica para o snapshot atual no nível 1. MUST exibir somente um resultado da revisão atual, inclusive `NoSafeHint`, e reiniciar a progressão no nível 1 após cada jogada que altere o tabuleiro. O resultado 003 fornece a revisão analisada conforme `003-logical-hints` FR-005.
 
 ### Key Entities
 
@@ -86,6 +89,7 @@ O jogador pode usar candidatos, corrigir ações e compreender o fim da partida.
 - **SC-002**: Em 100% dos cenários de undo/redo, o estado após a operação corresponde ao estado salvo antes da mudança.
 - **SC-003**: Nenhum puzzle é marcado concluído enquanto existir célula incorreta ou vazia.
 - **SC-004**: As interações de teclado e de toque cobrem os controles necessários para concluir uma partida sem conexão.
+- **SC-005**: Em 100% dos cenários em que o tabuleiro muda durante o cálculo da dica, a sessão não exibe resultado com revisão diferente da atual; ela solicita a revisão atual desde o nível 1 e exibe o resultado dessa revisão ou `NoSafeHint`.
 
 ## Assumptions
 
@@ -113,8 +117,8 @@ O jogador pode usar candidatos, corrigir ações e compreender o fim da partida.
 - **Validação local**: Reproduzir os fluxos de entrada, conflitos, notas e histórico nos dois alvos.
 
 ### Slice 3: Pausar e concluir
-- **Escopo**: Exibir tempo, pausar/retomar, solicitar dica e encerrar com resumo quando o tabuleiro estiver correto.
-- **Validação local**: Exercitar suspensão/retorno, responsividade, dica e conclusão completa.
+- **Escopo**: Exibir tempo, pausar/retomar, solicitar dica, descartar/recalcular resultados obsoletos conforme FR-013, registrar no composition root MAUI real o `GetHintUseCase` e suas dependências e encerrar com resumo quando o tabuleiro estiver correto.
+- **Validação local**: Exercitar suspensão/retorno, responsividade, resultado obsoleto e novo pedido desde o nível 1, registro do caso de uso no composition root, dica e conclusão completa.
 
 ## 4. GATES DE VALIDAÇÃO (.NET Toolchain)
 
@@ -130,6 +134,6 @@ Esses comandos se aplicam à `CageLogic.slnx` e aos projetos `net10.0` existente
 
 1. Criar arquivos somente dentro do projeto correspondente e respeitar namespaces e convenções existentes.
 2. Alterar somente o necessário para cumprir o contrato desta feature.
-3. Registrar no DI qualquer contrato criado ou alterado na mesma fatia.
+3. Registrar no DI os contratos e serviços criados ou alterados usando o composition root MAUI real na mesma fatia; incluir o `GetHintUseCase` de 003 e suas dependências necessárias. Não criar composition root artificial em biblioteca.
 4. Não mover regras de jogo, solver ou geração para ViewModels/controles visuais.
 5. Aplicar os guardrails C# e logging compartilhados em specs/README.md.

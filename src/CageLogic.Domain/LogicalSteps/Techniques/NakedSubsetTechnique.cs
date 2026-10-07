@@ -47,7 +47,16 @@ public abstract class NakedSubsetTechnique : ILogicalTechnique
                     steps.Add(new LogicalStep(
                         Id,
                         eliminations: eliminations,
-                        relatedPositions: positions.Concat(eliminations.Select(item => item.Position))));
+                        relatedPositions: positions.Concat(eliminations.Select(item => item.Position)),
+                        evidence: new LogicalStepEvidence(
+                            positions,
+                            region.Positions,
+                            digits,
+                            LogicalScopeContext.ForRegion(
+                                GetRegionKind(region.Index),
+                                GetRegionLocalIndex(region.Index)),
+                            group.SelectMany(cell => cell.Values.Select(value =>
+                                new LogicalPatternCandidate(cell.Position, value))))));
                 }
             }
         }
@@ -78,4 +87,17 @@ public abstract class NakedSubsetTechnique : ILogicalTechnique
             }
         }
     }
+
+    private static LogicalScopeKind GetRegionKind(int regionIndex) => regionIndex switch
+    {
+        < 9 => LogicalScopeKind.Row,
+        < 18 => LogicalScopeKind.Column,
+        _ => LogicalScopeKind.Block
+    };
+
+    private static int GetRegionLocalIndex(int regionIndex) => regionIndex < 9
+        ? regionIndex
+        : regionIndex < 18
+            ? regionIndex - 9
+            : regionIndex - 18;
 }

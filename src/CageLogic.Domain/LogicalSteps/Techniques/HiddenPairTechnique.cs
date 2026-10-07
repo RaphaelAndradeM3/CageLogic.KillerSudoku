@@ -45,7 +45,16 @@ public sealed class HiddenPairTechnique : ILogicalTechnique
                         steps.Add(new LogicalStep(
                             Id,
                             eliminations: eliminations,
-                            relatedPositions: pairPositions.Concat(eliminations.Select(item => item.Position))));
+                            relatedPositions: pairPositions.Concat(eliminations.Select(item => item.Position)),
+                            evidence: new LogicalStepEvidence(
+                                pairPositions,
+                                region.Positions,
+                                [firstDigit, secondDigit],
+                                LogicalScopeContext.ForRegion(
+                                    GetRegionKind(region.Index),
+                                    GetRegionLocalIndex(region.Index)),
+                                pairPositions.SelectMany(position => new[] { firstDigit, secondDigit }
+                                    .Select(value => new LogicalPatternCandidate(position, value))))));
                     }
                 }
             }
@@ -53,4 +62,17 @@ public sealed class HiddenPairTechnique : ILogicalTechnique
 
         return LogicalStepOrdering.SelectBest(steps);
     }
+
+    private static LogicalScopeKind GetRegionKind(int regionIndex) => regionIndex switch
+    {
+        < 9 => LogicalScopeKind.Row,
+        < 18 => LogicalScopeKind.Column,
+        _ => LogicalScopeKind.Block
+    };
+
+    private static int GetRegionLocalIndex(int regionIndex) => regionIndex < 9
+        ? regionIndex
+        : regionIndex < 18
+            ? regionIndex - 9
+            : regionIndex - 18;
 }

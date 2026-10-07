@@ -33,7 +33,14 @@ public sealed class CageCombinationTechnique : ILogicalTechnique
                         steps.Add(new LogicalStep(
                             Id,
                             eliminations: [new CandidateElimination(position, candidate)],
-                            relatedPositions: cage.Positions));
+                            relatedPositions: cage.Positions,
+                            evidence: new LogicalStepEvidence(
+                                cage.Positions,
+                                cage.Positions,
+                                assignments.PositionsByValue.Keys.Append(candidate),
+                                LogicalScopeContext.ForCage(cage.TargetSum),
+                                assignments.ValuesByPosition.SelectMany(pair => pair.Value.Select(value =>
+                                    new LogicalPatternCandidate(pair.Key, value))))));
                     }
                 }
             }
