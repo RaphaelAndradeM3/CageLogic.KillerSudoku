@@ -66,6 +66,8 @@ public sealed class LogicalTechniqueTests
 
         Assert.That(step!.TechniqueId, Is.EqualTo(LogicalTechniqueId.NakedSingle));
         Assert.That(step.Placement, Is.EqualTo(new LogicalPlacement(new CellPosition(0, 0), 5)));
+        Assert.That(step.Evidence!.PatternPositions, Is.EqualTo(new[] { new CellPosition(0, 0) }));
+        Assert.That(step.Evidence.RelevantDigits, Is.EqualTo(new[] { 5 }));
     }
 
     [Test]
@@ -86,6 +88,10 @@ public sealed class LogicalTechniqueTests
 
         Assert.That(step!.TechniqueId, Is.EqualTo(LogicalTechniqueId.HiddenSingle));
         Assert.That(step.Placement, Is.EqualTo(new LogicalPlacement(new CellPosition(0, 0), 1)));
+        Assert.That(step.Evidence!.PatternPositions, Is.EqualTo(new[] { new CellPosition(0, 0) }));
+        Assert.That(step.Evidence.ScopePositions, Is.EqualTo(Enumerable.Range(0, 9).Select(column => new CellPosition(0, column))));
+        Assert.That(step.Evidence.ScopeContext!.Kind, Is.EqualTo(LogicalScopeKind.Row));
+        Assert.That(step.Evidence.RelevantDigits, Is.EqualTo(new[] { 1 }));
     }
 
     [Test]
@@ -98,6 +104,9 @@ public sealed class LogicalTechniqueTests
 
         Assert.That(step!.TechniqueId, Is.EqualTo(LogicalTechniqueId.CageSingle));
         Assert.That(step.Placement, Is.EqualTo(new LogicalPlacement(new CellPosition(0, 0), 1)));
+        Assert.That(step.Evidence!.PatternPositions, Is.EqualTo(new[] { new CellPosition(0, 0), new CellPosition(0, 1) }));
+        Assert.That(step.Evidence.ScopeContext!.Kind, Is.EqualTo(LogicalScopeKind.Cage));
+        Assert.That(step.Evidence.ScopeContext.TargetSum, Is.EqualTo(3));
     }
 
     [Test]

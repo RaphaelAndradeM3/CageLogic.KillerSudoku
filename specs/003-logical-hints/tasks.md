@@ -46,12 +46,12 @@ Cada tarefa usa `- [ ] Tnnn [P?] [US#?] Descrição com caminho exato`. `[P]` in
 
 ### Fatia 1 — Singles
 
-- [ ] T006 [P] [US1] Ampliar os vetores LH-01 (Naked Single), LH-02 (Hidden Single) e LH-03 (Cage Single) para exigir evidência de dedução e papéis de destaque declarados em `specs/003-logical-hints/spec.md` em `tests/CageLogic.Domain.Tests/LogicalSteps/LogicalTechniqueTests.cs`.
-- [ ] T007 [P] [US1] Criar testes para os nomes e explicações em português dos vetores LH-01 a LH-03, comparando-os ao catálogo e sem revelar valor concreto no primeiro nível, em `tests/CageLogic.Application.Tests/Hints/LogicalHintExplanationCatalogTests.cs`.
-- [ ] T008 [P] [US1] Preencher `LogicalStepEvidence` nas estratégias Naked Single, Hidden Single e Cage Single em `src/CageLogic.Domain/LogicalSteps/Techniques/NakedSingleTechnique.cs`, `src/CageLogic.Domain/LogicalSteps/Techniques/HiddenSingleTechnique.cs` e `src/CageLogic.Domain/LogicalSteps/Techniques/CageSingleTechnique.cs`.
-- [ ] T009 [P] [US1] Adicionar nome e explicação geral das três técnicas de singles ao catálogo em `src/CageLogic.Application/Hints/LogicalHintExplanationCatalog.cs`.
-- [ ] T010 [P] [US1] Executar o teste focado de técnicas do Domain em `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalTechniqueTests` após T008.
-- [ ] T011 [P] [US1] Executar os testes do catálogo em `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalHintExplanationCatalogTests` após T009.
+- [x] T006 [P] [US1] Ampliar os vetores LH-01 (Naked Single), LH-02 (Hidden Single) e LH-03 (Cage Single) para exigir evidência de dedução e papéis de destaque declarados em `specs/003-logical-hints/spec.md` em `tests/CageLogic.Domain.Tests/LogicalSteps/LogicalTechniqueTests.cs`.
+- [x] T007 [P] [US1] Criar testes para os nomes e explicações em português dos vetores LH-01 a LH-03, comparando-os ao catálogo e sem revelar valor concreto no primeiro nível, em `tests/CageLogic.Application.Tests/Hints/LogicalHintExplanationCatalogTests.cs`.
+- [x] T008 [P] [US1] Preencher `LogicalStepEvidence` nas estratégias Naked Single, Hidden Single e Cage Single em `src/CageLogic.Domain/LogicalSteps/Techniques/NakedSingleTechnique.cs`, `src/CageLogic.Domain/LogicalSteps/Techniques/HiddenSingleTechnique.cs` e `src/CageLogic.Domain/LogicalSteps/Techniques/CageSingleTechnique.cs`.
+- [x] T009 [P] [US1] Adicionar nome e explicação geral das três técnicas de singles ao catálogo em `src/CageLogic.Application/Hints/LogicalHintExplanationCatalog.cs`.
+- [x] T010 [P] [US1] Executar o teste focado de técnicas do Domain em `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalTechniqueTests` após T008.
+- [x] T011 [P] [US1] Executar os testes do catálogo em `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalHintExplanationCatalogTests` após T009.
 
 ### Fatia 2 — Técnicas Killer Sudoku
 
