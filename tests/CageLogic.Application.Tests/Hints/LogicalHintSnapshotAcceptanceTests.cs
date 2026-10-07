@@ -39,6 +39,21 @@ public sealed class LogicalHintSnapshotAcceptanceTests
         var expectedCandidates = expectedEliminations
             .Select(elimination => new HintCandidateReference(elimination.Position, elimination.Value))
             .ToArray();
+        var expectedPatternEvidence = ToPatternCandidates(vector.PatternCandidateCodes);
+        var expectedPatternCandidates = step!.Evidence!.PatternCandidates
+            .Select(candidate => new HintCandidateReference(candidate.Position, candidate.Value))
+            .ToArray();
+        var catalog = new LogicalHintExplanationCatalog();
+        var expectedHighlightsExplanation = catalog.Format(
+            vector.TechniqueId,
+            step.Evidence,
+            step.Placement,
+            HintLevel.Highlights);
+        var expectedActionExplanation = catalog.Format(
+            vector.TechniqueId,
+            step.Evidence,
+            step.Placement,
+            HintLevel.Action);
 
         Assert.Multiple(() =>
         {
@@ -47,6 +62,8 @@ public sealed class LogicalHintSnapshotAcceptanceTests
             Assert.That(step.Evidence!.PatternPositions, Is.EqualTo(expectedPattern), vector.Id);
             Assert.That(step.Evidence.ScopePositions, Is.EqualTo(expectedScope), vector.Id);
             Assert.That(step.Evidence.RelevantDigits, Is.EqualTo(vector.RelevantDigits), vector.Id);
+            Assert.That(step.Evidence.PatternCandidates, Is.EqualTo(expectedPatternEvidence), vector.Id);
+            Assert.That(ScopeContextMatches(step.Evidence.ScopeContext, vector.ExpectedScopeContext), Is.True, vector.Id);
             Assert.That(step.Eliminations, Is.EqualTo(expectedEliminations), vector.Id);
             Assert.That(step.Placement?.Position, Is.EqualTo(vector.ExpectedPosition), vector.Id);
             Assert.That(step.Placement?.Value, Is.EqualTo(vector.ExpectedValue), vector.Id);
@@ -83,11 +100,14 @@ public sealed class LogicalHintSnapshotAcceptanceTests
             Assert.That(explanation.Highlights, Is.Empty, vector.Id);
             Assert.That(explanation.InvolvedCandidates, Is.Empty, vector.Id);
             Assert.That(explanation.Action, Is.Null, vector.Id);
+            Assert.That(explanation.RelevantDigits, Is.Empty, vector.Id);
+            Assert.That(explanation.PatternCandidates, Is.Empty, vector.Id);
+            Assert.That(explanation.ScopeContext, Is.Null, vector.Id);
 
             Assert.That(highlights.Status, Is.EqualTo(HintStatus.Available), vector.Id);
             Assert.That(highlights.TechniqueId, Is.EqualTo(vector.TechniqueId), vector.Id);
             Assert.That(highlights.TechniqueName, Is.EqualTo(catalogEntry.Name), vector.Id);
-            Assert.That(highlights.Explanation, Is.EqualTo(catalogEntry.Explanation), vector.Id);
+            Assert.That(highlights.Explanation, Is.EqualTo(expectedHighlightsExplanation), vector.Id);
             Assert.That(highlights.Highlights.Keys, Is.EquivalentTo(expectedRoles), vector.Id);
             Assert.That(highlights.Highlights[HintHighlightRole.Pattern], Is.EqualTo(expectedPattern), vector.Id);
             if (expectedScope.Length > 0)
@@ -107,9 +127,44 @@ public sealed class LogicalHintSnapshotAcceptanceTests
 
             Assert.That(highlights.InvolvedCandidates, Is.EqualTo(expectedCandidates), vector.Id);
             Assert.That(highlights.Action, Is.Null, vector.Id);
+            Assert.That(ScopeContextMatches(highlights.ScopeContext, vector.ExpectedScopeContext), Is.True, vector.Id);
+            if (vector.ExpectedScopeDescription is { } scopeDescription)
+            {
+                Assert.That(highlights.Explanation, Does.Contain(scopeDescription), vector.Id);
+            }
+
+            if (vector.ExpectedPosition.HasValue)
+            {
+                Assert.That(highlights.RelevantDigits, Is.Empty, vector.Id);
+                Assert.That(highlights.PatternCandidates, Is.Empty, vector.Id);
+                Assert.That(highlights.Explanation, Does.Not.Contain($"O dígito envolvido é {vector.ExpectedValue}."), vector.Id);
+            }
+            else
+            {
+                Assert.That(highlights.RelevantDigits, Is.EqualTo(vector.RelevantDigits), vector.Id);
+                Assert.That(highlights.PatternCandidates, Is.EqualTo(expectedPatternCandidates), vector.Id);
+                if (vector.ExpectedDigitsDescription is { } digitsDescription)
+                {
+                    Assert.That(highlights.Explanation, Does.Contain(digitsDescription), vector.Id);
+                }
+
+                if (expectedPatternCandidates.Length > 0)
+                {
+                    Assert.That(highlights.Explanation, Does.Contain("No padrão, os pares posição/dígito são:"), vector.Id);
+                }
+            }
+
             Assert.That(action.Status, Is.EqualTo(HintStatus.Available), vector.Id);
             Assert.That(action.TechniqueId, Is.EqualTo(vector.TechniqueId), vector.Id);
             Assert.That(action.BoardRevision, Is.EqualTo(100), vector.Id);
+            Assert.That(action.Explanation, Is.EqualTo(expectedActionExplanation), vector.Id);
+            Assert.That(action.RelevantDigits, Is.EqualTo(vector.RelevantDigits), vector.Id);
+            Assert.That(action.PatternCandidates, Is.EqualTo(expectedPatternCandidates), vector.Id);
+            Assert.That(ScopeContextMatches(action.ScopeContext, vector.ExpectedScopeContext), Is.True, vector.Id);
+            if (vector.ExpectedDigitsDescription is { } actionDigitsDescription)
+            {
+                Assert.That(action.Explanation, Does.Contain(actionDigitsDescription), vector.Id);
+            }
 
             if (vector.ExpectedPosition is { } placePosition)
             {
@@ -145,7 +200,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
             [3],
             [],
             new CellPosition(2, 1),
-            3),
+            3,
+            [193],
+            null,
+            null,
+            "O dígito envolvido é 3."),
         new(
             "LH-02",
             LogicalTechniqueId.HiddenSingle,
@@ -155,7 +214,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
             [3],
             [],
             new CellPosition(0, 3),
-            3),
+            3,
+            [33],
+            LogicalScopeContext.ForRegion(LogicalScopeKind.Row, 0),
+            "O escopo é a linha 1.",
+            "O dígito envolvido é 3."),
         new(
             "LH-03",
             LogicalTechniqueId.CageSingle,
@@ -165,7 +228,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
             [9],
             [],
             new CellPosition(7, 5),
-            9),
+            9,
+            [689],
+            LogicalScopeContext.ForCage(45),
+            "O escopo é a cage com soma-alvo 45.",
+            "O dígito envolvido é 9."),
         new(
             "LH-04",
             LogicalTechniqueId.CageCombination,
@@ -175,7 +242,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
             [1, 3, 4, 5, 9],
             [new CandidateElimination(new CellPosition(0, 1), 1)],
             null,
-            null),
+            null,
+            [13, 14, 21, 25, 29, 31, 35, 39, 41, 45, 49, 63, 64],
+            LogicalScopeContext.ForCage(45),
+            "O escopo é a cage com soma-alvo 45.",
+            "Os dígitos envolvidos são 1, 3, 4, 5 e 9."),
         new(
             "LH-05",
             LogicalTechniqueId.CageRegionIntersection,
@@ -189,7 +260,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
                 new CandidateElimination(new CellPosition(4, 8), 1)
             ],
             null,
-            null),
+            null,
+            [331, 341, 351],
+            LogicalScopeContext.ForCageRegionIntersection(LogicalScopeKind.Block, 5, 45),
+            "O escopo é a interseção entre a cage com soma-alvo 45 e o bloco 6.",
+            "O dígito envolvido é 1."),
         new(
             "LH-06",
             LogicalTechniqueId.RuleOf45,
@@ -202,7 +277,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
                 new CandidateElimination(new CellPosition(7, 0), 2)
             ],
             null,
-            null),
+            null,
+            [],
+            LogicalScopeContext.ForRuleOf45(LogicalScopeKind.Column, 0, 45, Enumerable.Repeat(45, 9)),
+            "Na regra do 45 aplicada à coluna 1, o resíduo é 45 após considerar 9 cages com soma-alvo 45.",
+            "Os dígitos envolvidos são 2 e 7."),
         new(
             "LH-07",
             LogicalTechniqueId.NakedPair,
@@ -223,7 +302,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
                 new CandidateElimination(new CellPosition(5, 4), 8)
             ],
             null,
-            null),
+            null,
+            [324, 328, 414, 418],
+            LogicalScopeContext.ForRegion(LogicalScopeKind.Block, 4),
+            "O escopo é o bloco 5.",
+            "Os dígitos envolvidos são 4 e 8."),
         new(
             "LH-08",
             LogicalTechniqueId.HiddenPair,
@@ -240,7 +323,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
                 new CandidateElimination(new CellPosition(5, 6), 6)
             ],
             null,
-            null),
+            null,
+            [448, 449, 518, 519],
+            LogicalScopeContext.ForRegion(LogicalScopeKind.Block, 5),
+            "O escopo é o bloco 6.",
+            "Os dígitos envolvidos são 8 e 9."),
         new(
             "LH-09",
             LogicalTechniqueId.NakedTriple,
@@ -257,7 +344,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
                 new CandidateElimination(new CellPosition(6, 3), 9)
             ],
             null,
-            null)
+            null,
+            [302, 308, 392, 398, 399, 482, 488, 489],
+            LogicalScopeContext.ForRegion(LogicalScopeKind.Column, 3),
+            "O escopo é a coluna 4.",
+            "Os dígitos envolvidos são 2, 8 e 9.")
     ];
 
     private static ValidatedPuzzle CreatePuzzle(string encodedGivens)
@@ -297,6 +388,29 @@ public sealed class LogicalHintSnapshotAcceptanceTests
         .Select(index => new CellPosition(index / 9, index % 9))
         .ToArray();
 
+    private static LogicalPatternCandidate[] ToPatternCandidates(IEnumerable<int> codes) => codes
+        .Select(code =>
+        {
+            var positionIndex = code / 10;
+            return new LogicalPatternCandidate(new CellPosition(positionIndex / 9, positionIndex % 9), code % 10);
+        })
+        .ToArray();
+
+    private static bool ScopeContextMatches(LogicalScopeContext? actual, LogicalScopeContext? expected)
+    {
+        if (actual is null || expected is null)
+        {
+            return actual is null && expected is null;
+        }
+
+        return actual.Kind == expected.Kind &&
+               actual.RegionKind == expected.RegionKind &&
+               actual.RegionIndex == expected.RegionIndex &&
+               actual.TargetSum == expected.TargetSum &&
+               actual.ResidualSum == expected.ResidualSum &&
+               actual.RelatedCageTargetSums.SequenceEqual(expected.RelatedCageTargetSums);
+    }
+
     public sealed record HintAcceptanceVector(
         string Id,
         LogicalTechniqueId TechniqueId,
@@ -306,7 +420,11 @@ public sealed class LogicalHintSnapshotAcceptanceTests
         int[] RelevantDigits,
         CandidateElimination[] Eliminations,
         CellPosition? ExpectedPosition,
-        int? ExpectedValue);
+        int? ExpectedValue,
+        int[] PatternCandidateCodes,
+        LogicalScopeContext? ExpectedScopeContext,
+        string? ExpectedScopeDescription,
+        string? ExpectedDigitsDescription);
 }
 
 

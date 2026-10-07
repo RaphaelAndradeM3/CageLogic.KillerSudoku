@@ -173,8 +173,8 @@ Depois: T030 (GetHintUseCase.cs) → T031 (testes de progressão)
 
 ### Vetores de aceitação com técnicas reais
 
-- [x] T035 [US1] Substituir os vetores LH-01 a LH-09 montados manualmente em `tests/CageLogic.Application.Tests/Hints/GetHintUseCaseTests.cs` por fixtures completas de snapshots válidos e determinísticos, usando o `LogicalStepAnalyzer` real sem `FixedAnalyzer`; garantir que cada técnica indicada seja a primeira aplicável e conferir ID, efeito, mapa exato de evidências/destaques e texto do catálogo conforme `specs/003-logical-hints/spec.md` (SC-001/SC-002; partial).
+- [x] T035 [US1] Substituir os vetores LH-01 a LH-09 montados manualmente em `tests/CageLogic.Application.Tests/Hints/GetHintUseCaseTests.cs` por fixtures completas de snapshots válidos e determinísticos, usando o `LogicalStepAnalyzer` real sem `FixedAnalyzer`; garantir que cada técnica indicada seja a primeira aplicável e conferir ID, efeito, mapa exato de evidências/destaques e texto do catálogo conforme `specs/003-logical-hints/spec.md` (SC-001/SC-002).
 
 ### Projeção de evidência pedagógica
 
-- [ ] T036 [US2] Projetar no resultado de Application os dígitos e pares posição/dígito exatos do padrão, além do contexto tipado de escopo (`LogicalScopeContext`), e formatar esses dados em português para as técnicas que precisam deles; preservar os limites de revelação para não expor valor de colocação antes do nível 3, com testes de destaques e explicação por vetor conforme `specs/003-logical-hints/spec.md` FR-002/FR-009/SC-002 e `data-model.md` “Evidência de dedução” (partial).
+- [x] T036 [US2] Projetar no resultado de Application os dígitos e pares posição/dígito exatos do padrão, além do contexto tipado de escopo (`LogicalScopeContext`), e formatar esses dados em português para as técnicas que precisam deles; preservar os limites de revelação para não expor valor de colocação antes do nível 3, com testes de destaques e explicação por vetor conforme `specs/003-logical-hints/spec.md` FR-002/FR-009/SC-002 e `data-model.md` “Evidência de dedução”.

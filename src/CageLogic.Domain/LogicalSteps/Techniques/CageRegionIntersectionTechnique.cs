@@ -48,7 +48,9 @@ public sealed class CageRegionIntersectionTechnique : ILogicalTechnique
                                 LogicalScopeContext.ForCageRegionIntersection(
                                     GetRegionKind(region.Index),
                                     GetRegionLocalIndex(region.Index),
-                                    cage.TargetSum))));
+                                    cage.TargetSum),
+                                possiblePositions.Select(position =>
+                                    new LogicalPatternCandidate(position, digit)))));
                     }
                 }
             }

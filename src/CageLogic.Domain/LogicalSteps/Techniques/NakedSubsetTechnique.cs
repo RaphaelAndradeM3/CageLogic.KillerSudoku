@@ -54,7 +54,9 @@ public abstract class NakedSubsetTechnique : ILogicalTechnique
                             digits,
                             LogicalScopeContext.ForRegion(
                                 GetRegionKind(region.Index),
-                                GetRegionLocalIndex(region.Index)))));
+                                GetRegionLocalIndex(region.Index)),
+                            group.SelectMany(cell => cell.Values.Select(value =>
+                                new LogicalPatternCandidate(cell.Position, value))))));
                 }
             }
         }

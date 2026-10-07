@@ -15,7 +15,9 @@ public sealed class NakedSingleTechnique : ILogicalTechnique
                 new LogicalPlacement(candidates.Position, candidates.Values.Single()),
                 evidence: new LogicalStepEvidence(
                     [candidates.Position],
-                    relevantDigits: candidates.Values)))
+                    relevantDigits: candidates.Values,
+                    patternCandidates: candidates.Values.Select(value =>
+                        new LogicalPatternCandidate(candidates.Position, value)))))
             .FirstOrDefault();
     }
 }

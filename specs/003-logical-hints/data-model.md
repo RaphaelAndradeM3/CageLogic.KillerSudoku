@@ -1,6 +1,6 @@
 # Modelo de dados — Dicas Lógicas Progressivas
 
-Este desenho estende as bibliotecas Domain e Application atuais. As classes abaixo são contratos de planejamento; não afirmam que já estejam implementadas. O consumidor futuro é a sessão de jogo MAUI de 004.
+Este documento registra os contratos das bibliotecas Domain e Application para a sessão de jogo MAUI de 004.
 
 ## Tipos de entrada
 
@@ -38,6 +38,7 @@ Dados tipados e sem texto para explicar por que a estratégia selecionou o passo
 | `PatternPositions` | posições | Células que estabelecem o padrão lógico. |
 | `ScopePositions` | posições | Linha, coluna, bloco, cage ou região considerados pela estratégia. |
 | `RelevantDigits` | dígitos 1–9 | Dígitos que participam do raciocínio; nunca são texto localizado. |
+| `PatternCandidates` | pares posição/dígito | Candidatos exatos que estabelecem o padrão; não indicam por si só uma ação de remoção. |
 | `ScopeContext` | contexto tipado opcional | Informação específica necessária à explicação, como alvo de cage ou residual da Rule of 45. |
 
 O efeito continua sendo carregado pelo `LogicalStep`: uma `LogicalPlacement` ou uma lista de `CandidateElimination`. `RelatedPositions` permanece útil como união ordenada das posições relacionadas; não substitui os papéis da evidência. A estratégia que já calcula a dedução fornece a evidência, evitando reconstruir regras em Application.
@@ -56,7 +57,7 @@ Application mantém uma entrada em português por `LogicalTechniqueId` estável 
 | `Highlights` (2) | Conteúdo do nível 1 e destaques tipados das posições e candidatos envolvidos; sem declarar valor a colocar nem candidatos a remover. |
 | `Action` (3) | Conteúdo dos níveis anteriores e a ação lógica concreta. |
 
-O destaque de candidatos no nível 2 identifica visualmente os candidatos envolvidos no padrão/efeito, sem afirmar que devem ser removidos. No nível 3, `RemoveCandidates` identifica explicitamente quais devem ser removidos. Para passo de colocação, o nível 2 pode destacar a posição-alvo, mas não seu valor.
+O destaque de candidatos no nível 2 identifica visualmente os candidatos envolvidos no padrão/efeito, sem afirmar que devem ser removidos. O resultado projeta `RelevantDigits`, `PatternCandidates` e `ScopeContext` quando compatíveis com o nível pedido. Em passos de eliminação, esses dados podem explicar o padrão no nível 2. Em passos de colocação, o nível 2 pode destacar a posição-alvo e o contexto, mas omite dígitos e pares posição/dígito que revelem o valor. No nível 3, `RemoveCandidates` identifica explicitamente quais devem ser removidos e a colocação passa a incluir o valor.
 
 ### `HintAction`
 
@@ -77,7 +78,7 @@ Não há colocação implícita em um passo que só elimina candidatos. Uma colo
 | `NoSafeHint` | O estado é válido, mas nenhuma técnica do catálogo v1 encontra um passo; não inclui dica nem valor. |
 | `ValueNotConfirmed` | O nível 3 pediu uma colocação, mas o puzzle original não tem unicidade confirmada; não inclui valor. Passos de eliminação continuam tipados como eliminação. |
 
-Todo resultado ecoa `BoardRevision`. `HintResult` não carrega o `LogicalStep` completo nos níveis 1 e 2: apenas a projeção permitida para impedir vazamento acidental.
+Todo resultado ecoa `BoardRevision`. `HintResult` não carrega o `LogicalStep` completo nos níveis 1 e 2: inclui apenas a projeção permitida, com dígitos, pares posição/dígito e contexto de escopo condicionados ao nível para impedir vazamento acidental.
 
 ## Validação e estado
 

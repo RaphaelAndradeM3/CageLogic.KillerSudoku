@@ -29,7 +29,8 @@ public sealed class CageSingleTechnique : ILogicalTechnique
                             cage.Positions,
                             cage.Positions,
                             [values.Single()],
-                            LogicalScopeContext.ForCage(cage.TargetSum))));
+                            LogicalScopeContext.ForCage(cage.TargetSum),
+                            [new LogicalPatternCandidate(position, values.Single())])));
                 }
             }
         }

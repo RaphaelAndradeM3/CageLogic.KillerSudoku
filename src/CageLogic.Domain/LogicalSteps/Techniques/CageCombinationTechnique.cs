@@ -38,7 +38,9 @@ public sealed class CageCombinationTechnique : ILogicalTechnique
                                 cage.Positions,
                                 cage.Positions,
                                 assignments.PositionsByValue.Keys.Append(candidate),
-                                LogicalScopeContext.ForCage(cage.TargetSum))));
+                                LogicalScopeContext.ForCage(cage.TargetSum),
+                                assignments.ValuesByPosition.SelectMany(pair => pair.Value.Select(value =>
+                                    new LogicalPatternCandidate(pair.Key, value))))));
                     }
                 }
             }

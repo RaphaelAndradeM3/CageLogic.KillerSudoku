@@ -107,6 +107,14 @@ public sealed class GetHintUseCase
         var involvedCandidates = includesHighlights
             ? step.Eliminations.Select(elimination => new HintCandidateReference(elimination.Position, elimination.Value)).ToArray()
             : Array.Empty<HintCandidateReference>();
+        var mayRevealPatternDigits = request.Level == HintLevel.Action || step.Placement is null;
+        var relevantDigits = includesHighlights && mayRevealPatternDigits
+            ? step.Evidence.RelevantDigits
+            : Array.Empty<int>();
+        var patternCandidates = includesHighlights && mayRevealPatternDigits
+            ? step.Evidence.PatternCandidates.Select(candidate => new HintCandidateReference(candidate.Position, candidate.Value)).ToArray()
+            : Array.Empty<HintCandidateReference>();
+        var scopeContext = includesHighlights ? step.Evidence.ScopeContext : null;
         HintAction? action = request.Level == HintLevel.Action
             ? step.Placement is { } actionPlacement
                 ? new HintAction.PlaceValue(actionPlacement.Position, actionPlacement.Value)
@@ -118,10 +126,13 @@ public sealed class GetHintUseCase
             HintStatus.Available,
             step.TechniqueId,
             explanation.Name,
-            explanation.Explanation,
+            _catalog.Format(step.TechniqueId, step.Evidence, step.Placement, request.Level),
             highlights,
             involvedCandidates,
-            action);
+            action,
+            relevantDigits,
+            patternCandidates,
+            scopeContext);
     }
 
     private bool HasCompatibleSolution(

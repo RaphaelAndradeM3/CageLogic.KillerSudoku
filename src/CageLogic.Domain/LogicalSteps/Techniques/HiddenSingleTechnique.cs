@@ -28,7 +28,8 @@ public sealed class HiddenSingleTechnique : ILogicalTechnique
                             [positions[0]],
                             region.Positions,
                             [digit],
-                            CreateRegionContext(region.Index))));
+                            CreateRegionContext(region.Index),
+                            [new LogicalPatternCandidate(positions[0], digit)])));
                 }
             }
         }

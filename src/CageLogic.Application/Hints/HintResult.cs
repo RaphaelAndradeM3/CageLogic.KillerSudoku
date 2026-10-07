@@ -15,7 +15,10 @@ public sealed class HintResult
         string? explanation = null,
         IReadOnlyDictionary<HintHighlightRole, IReadOnlyList<CellPosition>>? highlights = null,
         IEnumerable<HintCandidateReference>? involvedCandidates = null,
-        HintAction? action = null)
+        HintAction? action = null,
+        IEnumerable<int>? relevantDigits = null,
+        IEnumerable<HintCandidateReference>? patternCandidates = null,
+        LogicalScopeContext? scopeContext = null)
     {
         BoardRevision = boardRevision;
         Status = status;
@@ -29,6 +32,19 @@ public sealed class HintResult
             .ThenBy(candidate => candidate.Value)
             .ToArray());
         Action = action;
+        var digits = (relevantDigits ?? Array.Empty<int>()).ToArray();
+        if (digits.Any(digit => digit is < 1 or > 9))
+        {
+            throw new ArgumentOutOfRangeException(nameof(relevantDigits), "Relevant digits must be between 1 and 9.");
+        }
+
+        RelevantDigits = Array.AsReadOnly(digits.Distinct().Order().ToArray());
+        PatternCandidates = Array.AsReadOnly((patternCandidates ?? Array.Empty<HintCandidateReference>())
+            .Distinct()
+            .OrderBy(candidate => candidate.Position.Row * 9 + candidate.Position.Column)
+            .ThenBy(candidate => candidate.Value)
+            .ToArray());
+        ScopeContext = scopeContext;
     }
 
     public long BoardRevision { get; }
@@ -49,6 +65,15 @@ public sealed class HintResult
 
     /// <summary>The explicit placement or removal action, available only at level 3.</summary>
     public HintAction? Action { get; }
+
+    /// <summary>Digits used by the pattern, available with highlights unless that would reveal a placement value.</summary>
+    public IReadOnlyList<int> RelevantDigits { get; }
+
+    /// <summary>Exact position/digit pairs that establish the pattern, without implying an elimination.</summary>
+    public IReadOnlyList<HintCandidateReference> PatternCandidates { get; }
+
+    /// <summary>Typed region or cage information for the explanation, available from level 2.</summary>
+    public LogicalScopeContext? ScopeContext { get; }
 
     private static IReadOnlyDictionary<HintHighlightRole, IReadOnlyList<CellPosition>> NormalizeHighlights(
         IReadOnlyDictionary<HintHighlightRole, IReadOnlyList<CellPosition>>? highlights)

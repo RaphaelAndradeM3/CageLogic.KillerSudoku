@@ -80,7 +80,7 @@ O jogador percorre três níveis de ajuda: nome da técnica e explicação; dest
 - **FR-006**: O sistema MUST tratar como inconsistente um estado com conflitos de regras ou sem conclusão válida compatível com o puzzle original; nesse estado, MUST informar que as jogadas atuais impedem uma conclusão válida e não oferecer dicas nem valores. O sistema MUST recusar sugestão de valor quando o puzzle não tiver solução única confirmada.
 - **FR-007**: O sistema MUST informar quando não existe dica segura entre as técnicas disponíveis. Se o tabuleiro estiver completo e correto, MUST informar que o puzzle está resolvido e que não há próximo passo lógico.
 - **FR-008**: A ajuda MUST progredir em três níveis ordenados: nome da técnica e explicação; destaque das células afetadas e do alvo; ação lógica explícita. Um valor de colocação MUST aparecer somente no terceiro nível.
-- **FR-009**: Cada técnica MUST apresentar nome, explicação em linguagem clara, células relacionadas e, quando aplicável, alvo e valor sugerido.
+- **FR-009**: Cada técnica MUST apresentar nome, explicação em linguagem clara, células relacionadas, pares posição/dígito exatos do padrão e contexto tipado de escopo quando aplicáveis; o alvo pode ser destacado antes do nível 3, mas seu valor sugerido só pode ser apresentado nesse nível.
 - **FR-010**: Quando o passo lógico escolhido somente eliminar candidatos, o sistema MUST explicar e destacar as células e os candidatos afetados e, no nível mais explícito, indicar quais candidatos remover sem sugerir um dígito para colocar nesse passo.
 
 ### Key Entities
@@ -113,7 +113,7 @@ Cada ID é um vetor de teste determinístico com snapshot imutável completo e s
 ### Measurable Outcomes
 
 - **SC-001**: Existem fixtures de aceitação LH-01 a LH-09, uma por técnica v1, cada uma com snapshot e efeito esperado definidos.
-- **SC-002**: Em 9/9 fixtures LH-01 a LH-09, o `LogicalTechniqueId` e o mapa exato de destaques correspondem ao vetor determinístico; nome e explicação em português correspondem à saída do catálogo para a técnica e as evidências esperadas.
+- **SC-002**: Em 9/9 fixtures LH-01 a LH-09, o `LogicalTechniqueId`, o mapa exato de destaques, os dígitos e os pares posição/dígito do padrão correspondem ao vetor determinístico; nome e explicação em português correspondem à saída do catálogo para a técnica e as evidências esperadas, respeitando o nível solicitado.
 - **SC-003**: Nenhuma sugestão é apresentada como certa quando contradiz o estado válido ou a solução única do puzzle.
 - **SC-004**: Em todos os cenários de progressão, a ação lógica explícita aparece apenas no terceiro nível, após a explicação e o destaque; um valor de colocação nunca aparece antes desse nível.
 - **SC-005**: Para cada cenário de referência cujo passo somente elimina candidatos, o nível mais explícito identifica os candidatos a remover e não apresenta um dígito para colocar nesse passo.

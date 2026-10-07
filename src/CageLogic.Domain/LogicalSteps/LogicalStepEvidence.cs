@@ -10,7 +10,8 @@ public sealed class LogicalStepEvidence
         IEnumerable<CellPosition> patternPositions,
         IEnumerable<CellPosition>? scopePositions = null,
         IEnumerable<int>? relevantDigits = null,
-        LogicalScopeContext? scopeContext = null)
+        LogicalScopeContext? scopeContext = null,
+        IEnumerable<LogicalPatternCandidate>? patternCandidates = null)
     {
         ArgumentNullException.ThrowIfNull(patternPositions);
 
@@ -22,15 +23,32 @@ public sealed class LogicalStepEvidence
 
         var scope = NormalizePositions(scopePositions ?? Array.Empty<CellPosition>());
         var digits = (relevantDigits ?? Array.Empty<int>()).ToArray();
+        var candidates = (patternCandidates ?? Array.Empty<LogicalPatternCandidate>())
+            .Distinct()
+            .OrderBy(candidate => candidate.Position.Row * 9 + candidate.Position.Column)
+            .ThenBy(candidate => candidate.Value)
+            .ToArray();
+        var patternPositionsSet = pattern.ToHashSet();
         if (digits.Any(digit => digit is < 1 or > 9))
         {
             throw new ArgumentOutOfRangeException(nameof(relevantDigits), "Relevant digits must be between 1 and 9.");
+        }
+
+        if (candidates.Any(candidate => !patternPositionsSet.Contains(candidate.Position)))
+        {
+            throw new ArgumentException("Pattern candidates must belong to a pattern position.", nameof(patternCandidates));
+        }
+
+        if (candidates.Any(candidate => !digits.Contains(candidate.Value)))
+        {
+            throw new ArgumentException("Pattern candidates must use a relevant digit.", nameof(patternCandidates));
         }
 
         PatternPositions = Array.AsReadOnly(pattern);
         ScopePositions = Array.AsReadOnly(scope);
         RelevantDigits = Array.AsReadOnly(digits.Distinct().Order().ToArray());
         ScopeContext = scopeContext;
+        PatternCandidates = Array.AsReadOnly(candidates);
     }
 
     public IReadOnlyList<CellPosition> PatternPositions { get; }
@@ -40,6 +58,9 @@ public sealed class LogicalStepEvidence
     public IReadOnlyList<int> RelevantDigits { get; }
 
     public LogicalScopeContext? ScopeContext { get; }
+
+    /// <summary>Exact position/digit pairs that establish the logical pattern, without presentation labels.</summary>
+    public IReadOnlyList<LogicalPatternCandidate> PatternCandidates { get; }
 
     private static CellPosition[] NormalizePositions(IEnumerable<CellPosition> positions)
     {

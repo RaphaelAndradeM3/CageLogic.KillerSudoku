@@ -52,7 +52,9 @@ public sealed class HiddenPairTechnique : ILogicalTechnique
                                 [firstDigit, secondDigit],
                                 LogicalScopeContext.ForRegion(
                                     GetRegionKind(region.Index),
-                                    GetRegionLocalIndex(region.Index)))));
+                                    GetRegionLocalIndex(region.Index)),
+                                pairPositions.SelectMany(position => new[] { firstDigit, secondDigit }
+                                    .Select(value => new LogicalPatternCandidate(position, value))))));
                     }
                 }
             }
