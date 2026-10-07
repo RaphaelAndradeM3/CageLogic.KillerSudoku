@@ -10,6 +10,54 @@ namespace CageLogic.Domain.Tests.LogicalSteps;
 public sealed class LogicalTechniqueTests
 {
     [Test]
+    public void LogicalStepEvidence_NormalizesPositionsAndDigitsAndPreservesTypedScope()
+    {
+        var target = new CellPosition(0, 2);
+        var support = new CellPosition(0, 1);
+        var evidence = new LogicalStepEvidence(
+            [target, support, target],
+            [new CellPosition(0, 8), support],
+            [5, 2, 5],
+            LogicalScopeContext.ForRegion(LogicalScopeKind.Row, 0));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(evidence.PatternPositions, Is.EqualTo(new[] { support, target }));
+            Assert.That(evidence.ScopePositions, Is.EqualTo(new[] { support, new CellPosition(0, 8) }));
+            Assert.That(evidence.RelevantDigits, Is.EqualTo(new[] { 2, 5 }));
+            Assert.That(evidence.ScopeContext!.Kind, Is.EqualTo(LogicalScopeKind.Row));
+            Assert.That(evidence.ScopeContext.RegionIndex, Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public void LogicalStepEvidence_RejectsDigitsOutsideBoardRange()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new LogicalStepEvidence(
+            [new CellPosition(0, 0)],
+            relevantDigits: [0]));
+    }
+
+    [Test]
+    public void LogicalStep_CarriesEvidenceWithoutChangingRelatedPositionOrdering()
+    {
+        var evidence = new LogicalStepEvidence(
+            [new CellPosition(0, 2)],
+            [new CellPosition(0, 0), new CellPosition(0, 1)],
+            [5]);
+        var step = new LogicalStep(
+            LogicalTechniqueId.NakedSingle,
+            new LogicalPlacement(new CellPosition(0, 2), 5),
+            evidence: evidence);
+
+        Assert.That(step.Evidence, Is.SameAs(evidence));
+        Assert.That(step.RelatedPositions, Is.EqualTo(new[]
+        {
+            new CellPosition(0, 0), new CellPosition(0, 1), new CellPosition(0, 2)
+        }));
+    }
+
+    [Test]
     public void NakedSingle_PlacesOnlyCandidate()
     {
         var state = StateWithCandidates(OpenPuzzle(), (new CellPosition(0, 0), [5]));
