@@ -64,12 +64,12 @@ Cada tarefa usa `- [ ] Tnnn [P?] [US#?] Descrição com caminho exato`. `[P]` in
 
 ### Fatia 3 — Técnicas avançadas
 
-- [ ] T018 [P] [US1] Ampliar os vetores LH-07 (Naked Pair), LH-08 (Hidden Pair) e LH-09 (Naked Triple) para exigir evidência de padrão, escopo, efeito e papéis de destaque declarados em `specs/003-logical-hints/spec.md` em `tests/CageLogic.Domain.Tests/LogicalSteps/LogicalTechniqueTests.cs`.
-- [ ] T019 [P] [US1] Acrescentar testes para nomes e explicações em português dos vetores LH-07 a LH-09 em `tests/CageLogic.Application.Tests/Hints/LogicalHintExplanationCatalogTests.cs`.
-- [ ] T020 [P] [US1] Preencher evidências para Naked Pair, Hidden Pair e Naked Triple em `src/CageLogic.Domain/LogicalSteps/Techniques/NakedPairTechnique.cs`, `src/CageLogic.Domain/LogicalSteps/Techniques/HiddenPairTechnique.cs` e `src/CageLogic.Domain/LogicalSteps/Techniques/NakedTripleTechnique.cs`.
-- [ ] T021 [P] [US1] Adicionar ao catálogo os nomes e explicações de Naked Pair, Hidden Pair e Naked Triple em `src/CageLogic.Application/Hints/LogicalHintExplanationCatalog.cs`.
-- [ ] T022 [P] [US1] Executar os testes focados do Domain em `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalTechniqueTests` após T020.
-- [ ] T023 [P] [US1] Executar os testes focados do catálogo em `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalHintExplanationCatalogTests` após T021.
+- [x] T018 [P] [US1] Ampliar os vetores LH-07 (Naked Pair), LH-08 (Hidden Pair) e LH-09 (Naked Triple) para exigir evidência de padrão, escopo, efeito e papéis de destaque declarados em `specs/003-logical-hints/spec.md` em `tests/CageLogic.Domain.Tests/LogicalSteps/LogicalTechniqueTests.cs`.
+- [x] T019 [P] [US1] Acrescentar testes para nomes e explicações em português dos vetores LH-07 a LH-09 em `tests/CageLogic.Application.Tests/Hints/LogicalHintExplanationCatalogTests.cs`.
+- [x] T020 [P] [US1] Preencher evidências para Naked Pair, Hidden Pair e Naked Triple em `src/CageLogic.Domain/LogicalSteps/Techniques/NakedPairTechnique.cs`, `src/CageLogic.Domain/LogicalSteps/Techniques/HiddenPairTechnique.cs` e `src/CageLogic.Domain/LogicalSteps/Techniques/NakedTripleTechnique.cs`.
+- [x] T021 [P] [US1] Adicionar ao catálogo os nomes e explicações de Naked Pair, Hidden Pair e Naked Triple em `src/CageLogic.Application/Hints/LogicalHintExplanationCatalog.cs`.
+- [x] T022 [P] [US1] Executar os testes focados do Domain em `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalTechniqueTests` após T020.
+- [x] T023 [P] [US1] Executar os testes focados do catálogo em `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalHintExplanationCatalogTests` após T021.
 
 ### Caso de uso para explicação inicial
 

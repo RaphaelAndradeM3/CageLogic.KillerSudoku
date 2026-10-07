@@ -168,6 +168,9 @@ public sealed class LogicalTechniqueTests
         Assert.That(step!.TechniqueId, Is.EqualTo(LogicalTechniqueId.NakedPair));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 2), 1)));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 2), 2)));
+        Assert.That(step.Evidence!.PatternPositions, Is.EqualTo(new[] { new CellPosition(0, 0), new CellPosition(0, 1) }));
+        Assert.That(step.Evidence.RelevantDigits, Is.EqualTo(new[] { 1, 2 }));
+        Assert.That(step.Evidence.ScopeContext!.Kind, Is.EqualTo(LogicalScopeKind.Row));
     }
 
     [Test]
@@ -190,6 +193,9 @@ public sealed class LogicalTechniqueTests
         Assert.That(step!.TechniqueId, Is.EqualTo(LogicalTechniqueId.HiddenPair));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 0), 3)));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 1), 4)));
+        Assert.That(step.Evidence!.PatternPositions, Is.EqualTo(new[] { new CellPosition(0, 0), new CellPosition(0, 1) }));
+        Assert.That(step.Evidence.RelevantDigits, Is.EqualTo(new[] { 1, 2 }));
+        Assert.That(step.Evidence.ScopeContext!.Kind, Is.EqualTo(LogicalScopeKind.Row));
     }
 
     [Test]
@@ -206,6 +212,9 @@ public sealed class LogicalTechniqueTests
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 3), 1)));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 3), 2)));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 3), 3)));
+        Assert.That(step.Evidence!.PatternPositions, Is.EqualTo(new[] { new CellPosition(0, 0), new CellPosition(0, 1), new CellPosition(0, 2) }));
+        Assert.That(step.Evidence.RelevantDigits, Is.EqualTo(new[] { 1, 2, 3 }));
+        Assert.That(step.Evidence.ScopeContext!.Kind, Is.EqualTo(LogicalScopeKind.Row));
     }
 
     [Test]
