@@ -55,12 +55,12 @@ Cada tarefa usa `- [ ] Tnnn [P?] [US#?] Descrição com caminho exato`. `[P]` in
 
 ### Fatia 2 — Técnicas Killer Sudoku
 
-- [ ] T012 [P] [US1] Ampliar os vetores LH-04 (Cage Combination), LH-05 (Cage/Region Intersection) e LH-06 (Rule of 45) para exigir evidência suficiente ao raciocínio e os papéis de destaque declarados em `specs/003-logical-hints/spec.md` em `tests/CageLogic.Domain.Tests/LogicalSteps/LogicalTechniqueTests.cs`.
-- [ ] T013 [P] [US1] Acrescentar testes para os nomes e explicações dos vetores LH-04 a LH-06 e ausência de ação concreta no nível 1 em `tests/CageLogic.Application.Tests/Hints/LogicalHintExplanationCatalogTests.cs`.
-- [ ] T014 [P] [US1] Preencher evidências para Cage Combination, Cage/Region Intersection e Rule of 45 em `src/CageLogic.Domain/LogicalSteps/Techniques/CageCombinationTechnique.cs`, `src/CageLogic.Domain/LogicalSteps/Techniques/CageRegionIntersectionTechnique.cs` e `src/CageLogic.Domain/LogicalSteps/Techniques/RuleOf45Technique.cs`.
-- [ ] T015 [P] [US1] Adicionar ao catálogo os nomes e explicações de Cage Combination, Cage/Region Intersection e Rule of 45 em `src/CageLogic.Application/Hints/LogicalHintExplanationCatalog.cs`.
-- [ ] T016 [P] [US1] Executar os testes focados do Domain em `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalTechniqueTests` após T014.
-- [ ] T017 [P] [US1] Executar os testes focados do catálogo em `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalHintExplanationCatalogTests` após T015.
+- [x] T012 [P] [US1] Ampliar os vetores LH-04 (Cage Combination), LH-05 (Cage/Region Intersection) e LH-06 (Rule of 45) para exigir evidência suficiente ao raciocínio e os papéis de destaque declarados em `specs/003-logical-hints/spec.md` em `tests/CageLogic.Domain.Tests/LogicalSteps/LogicalTechniqueTests.cs`.
+- [x] T013 [P] [US1] Acrescentar testes para os nomes e explicações dos vetores LH-04 a LH-06 e ausência de ação concreta no nível 1 em `tests/CageLogic.Application.Tests/Hints/LogicalHintExplanationCatalogTests.cs`.
+- [x] T014 [P] [US1] Preencher evidências para Cage Combination, Cage/Region Intersection e Rule of 45 em `src/CageLogic.Domain/LogicalSteps/Techniques/CageCombinationTechnique.cs`, `src/CageLogic.Domain/LogicalSteps/Techniques/CageRegionIntersectionTechnique.cs` e `src/CageLogic.Domain/LogicalSteps/Techniques/RuleOf45Technique.cs`.
+- [x] T015 [P] [US1] Adicionar ao catálogo os nomes e explicações de Cage Combination, Cage/Region Intersection e Rule of 45 em `src/CageLogic.Application/Hints/LogicalHintExplanationCatalog.cs`.
+- [x] T016 [P] [US1] Executar os testes focados do Domain em `tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalTechniqueTests` após T014.
+- [x] T017 [P] [US1] Executar os testes focados do catálogo em `tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj` com `--configuration Release --filter FullyQualifiedName~LogicalHintExplanationCatalogTests` após T015.
 
 ### Fatia 3 — Técnicas avançadas
 

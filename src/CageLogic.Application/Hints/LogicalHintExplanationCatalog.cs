@@ -18,7 +18,16 @@ public sealed class LogicalHintExplanationCatalog
                     "Quando um dígito só pode ocupar uma célula em uma linha, coluna ou bloco, essa posição é obrigatória."),
                 [LogicalTechniqueId.CageSingle] = new(
                     "Valor único na cage",
-                    "Ao considerar todas as combinações válidas da cage, uma célula mantém o mesmo valor em todas elas.")
+                    "Ao considerar todas as combinações válidas da cage, uma célula mantém o mesmo valor em todas elas."),
+                [LogicalTechniqueId.CageCombination] = new(
+                    "Combinações da cage",
+                    "Cada cage precisa completar seu alvo com dígitos distintos; combinações impossíveis são removidas das possibilidades das células."),
+                [LogicalTechniqueId.CageRegionIntersection] = new(
+                    "Interseção de cage e região",
+                    "Se as posições possíveis de um dígito em uma cage estão na mesma região, esse dígito não pode aparecer nas outras células dela."),
+                [LogicalTechniqueId.RuleOf45] = new(
+                    "Regra do 45",
+                    "A soma dos dígitos de uma linha, coluna ou bloco restringe as combinações que as cages internas e atravessadas podem formar.")
             });
 
     public LogicalHintExplanation Get(LogicalTechniqueId techniqueId)

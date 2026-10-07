@@ -119,6 +119,9 @@ public sealed class LogicalTechniqueTests
 
         Assert.That(step!.TechniqueId, Is.EqualTo(LogicalTechniqueId.CageCombination));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 0), 2)));
+        Assert.That(step.Evidence!.PatternPositions, Is.EqualTo(new[] { new CellPosition(0, 0), new CellPosition(0, 1) }));
+        Assert.That(step.Evidence.ScopeContext!.Kind, Is.EqualTo(LogicalScopeKind.Cage));
+        Assert.That(step.Evidence.ScopeContext.TargetSum, Is.EqualTo(3));
     }
 
     [Test]
@@ -131,6 +134,10 @@ public sealed class LogicalTechniqueTests
 
         Assert.That(step!.TechniqueId, Is.EqualTo(LogicalTechniqueId.CageRegionIntersection));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 2), 1)));
+        Assert.That(step.Evidence!.PatternPositions, Is.EqualTo(new[] { new CellPosition(0, 0), new CellPosition(0, 1) }));
+        Assert.That(step.Evidence.RelevantDigits, Is.EqualTo(new[] { 1 }));
+        Assert.That(step.Evidence.ScopeContext!.Kind, Is.EqualTo(LogicalScopeKind.CageRegionIntersection));
+        Assert.That(step.Evidence.ScopeContext.TargetSum, Is.EqualTo(3));
     }
 
     [Test]
@@ -144,6 +151,9 @@ public sealed class LogicalTechniqueTests
         Assert.That(step!.TechniqueId, Is.EqualTo(LogicalTechniqueId.RuleOf45));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 0), 4)));
         Assert.That(step.Eliminations, Does.Contain(new CandidateElimination(new CellPosition(0, 1), 5)));
+        Assert.That(step.Evidence!.ScopeContext!.Kind, Is.EqualTo(LogicalScopeKind.RuleOf45));
+        Assert.That(step.Evidence.ScopeContext.ResidualSum, Is.Not.Null);
+        Assert.That(step.Evidence.ScopeContext.RelatedCageTargetSums, Is.Not.Empty);
     }
 
     [Test]

@@ -8,7 +8,10 @@ public sealed class LogicalHintExplanationCatalogTests
     [TestCase(LogicalTechniqueId.NakedSingle, "Único candidato")]
     [TestCase(LogicalTechniqueId.HiddenSingle, "Posição única")]
     [TestCase(LogicalTechniqueId.CageSingle, "Valor único na cage")]
-    public void Singles_HavePortugueseExplanationsWithoutConcreteAnswers(
+    [TestCase(LogicalTechniqueId.CageCombination, "Combinações da cage")]
+    [TestCase(LogicalTechniqueId.CageRegionIntersection, "Interseção de cage e região")]
+    [TestCase(LogicalTechniqueId.RuleOf45, "Regra do 45")]
+    public void SupportedTechniques_HavePortugueseExplanationsWithoutConcreteAnswers(
         LogicalTechniqueId techniqueId,
         string expectedName)
     {
