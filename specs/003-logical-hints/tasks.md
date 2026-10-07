@@ -107,8 +107,8 @@ Cada tarefa usa `- [ ] Tnnn [P?] [US#?] Descrição com caminho exato`. `[P]` in
 **Propósito**: manter o contrato para a sessão futura e executar os gates da solution.
 
 - [x] T032 Atualizar `specs/003-logical-hints/contracts/logical-hints.md` e `specs/003-logical-hints/quickstart.md` para refletir campos/status finais, vetores LH-01 a LH-09, eco da revisão por 003 e responsabilidade da sessão de 004 (FR-013/SC-005) de descartar revisões obsoletas e solicitar novamente a partir do nível 1. O registro do `GetHintUseCase` e dependências ocorre no composition root MAUI real da fatia 3 de 004.
-- [ ] T033 Executar `dotnet build CageLogic.slnx --configuration Release --warnaserror` após concluir as histórias e os testes focados.
-- [ ] T034 Executar `dotnet test CageLogic.slnx --no-build --configuration Release` em `CageLogic.slnx` somente se T033 concluir com sucesso.
+- [x] T033 Executar `dotnet build CageLogic.slnx --configuration Release --warnaserror` após concluir as histórias e os testes focados.
+- [x] T034 Executar `dotnet test CageLogic.slnx --no-build --configuration Release` em `CageLogic.slnx` somente se T033 concluir com sucesso.
 
 ---
 
