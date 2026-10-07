@@ -10,7 +10,7 @@
 
 1. Adicionar `LogicalStepEvidence` no Domain e preencher a evidência nas nove estratégias existentes. Manter texto localizado fora do Domain.
 2. Criar o catálogo de explicações e `GetHintUseCase` na Application. Aplicar validação de estrutura, conflitos, estado resolvido e compatibilidade das jogadas com o puzzle original antes de projetar uma dica.
-3. Testar projeções: nível 1 só apresenta técnica/explicação; nível 2 preenche `Highlights` (`Pattern`, `Scope`, `Target`, `Affected`) e `InvolvedCandidates` sem declarar a ação; nível 3 preenche `Action` como `PlaceValue` confirmada ou `RemoveCandidates` ordenada.
+3. Testar projeções: nível 1 só apresenta técnica/explicação; nível 2 preenche `Highlights` (`Pattern`, `Scope`, `Target`, `Affected`) e `ScopeContext`. Para eliminações, inclui `RelevantDigits` e os pares `PatternCandidates` sem declarar a ação; para colocações, mantém esses campos vazios para não revelar o valor. Nível 3 inclui a evidência completa permitida e `Action` como `PlaceValue` confirmada ou `RemoveCandidates` ordenada.
 4. Implementar a sessão consumidora conforme `004-game-session` FR-013/SC-005: enviar snapshot/revisão, descartar resultados obsoletos, solicitar novamente o snapshot atual desde o nível 1 e exibir apenas resultado da revisão atual ou `NoSafeHint`. Registrar `GetHintUseCase` e dependências no composition root MAUI real da fatia 3 de 004; não criar composition root para as bibliotecas de 003.
 
 ## Validação focada
@@ -42,8 +42,8 @@ Executar o segundo comando apenas se o build concluir com sucesso. Os comandos a
 
 ## Resultados esperados de referência
 
-- Pedido de nível 1 não inclui posições, dígitos ou a ação concreta.
-- Pedido de nível 2 inclui destaques necessários; para eliminação, pode destacar os candidatos envolvidos sem classificá-los como removíveis.
+- Pedido de nível 1 não inclui posições, dígitos, pares posição/dígito ou a ação concreta.
+- Pedido de nível 2 inclui destaques e contexto tipado; para eliminação, inclui os dígitos e pares posição/dígito exatos do padrão sem classificá-los como removíveis. Para colocação, destaca o alvo e omite dígitos e pares que revelem o valor.
 - Nível 3 de passo de eliminação retorna somente os pares posição/dígito a remover, sem sugerir colocação.
 - Nível 3 de passo de colocação retorna o valor somente quando o puzzle original tem solução única confirmada e o valor corresponde a ela.
 - Estado com conflito ou sem solução compatível retorna `InconsistentState`, sem dica/ação; estado completo e válido retorna `PuzzleSolved`.
@@ -51,6 +51,6 @@ Executar o segundo comando apenas se o build concluir com sucesso. Os comandos a
 - Estado válido sem técnica do catálogo retorna `NoSafeHint`.
 - Para origem `Multiple`, nenhuma solução compatível com o snapshot retorna `InconsistentState`; uma única solução compatível no snapshot restrito continua sem autorizar `PlaceValue`.
 
-O conjunto mensurável do SC-002 é fechado nos nove vetores LH-01 a LH-09. Cada teste confere o ID da técnica e os destaques com seu vetor; nome e explicação correspondem à saída do catálogo para a técnica e o snapshot esperados.
+O conjunto mensurável do SC-002 é fechado nos nove vetores LH-01 a LH-09. Cada teste confere o ID, o efeito, os destaques, os dígitos, os pares posição/dígito e o escopo com seu vetor; nome e explicação em português correspondem à técnica e ao nível pedidos.
 
 Build visual dos targets Windows/Android e teste de sessão na interface ficam para 004, depois que o host MAUI e workloads estiverem configurados.

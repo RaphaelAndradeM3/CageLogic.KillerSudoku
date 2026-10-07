@@ -28,8 +28,12 @@ O Domain recalcula candidatos a partir do snapshot. Anotações manuais de candi
 - `BoardRevision` e `Status` identificam o snapshot e o resultado explícito.
 - `TechniqueId`, `TechniqueName` e `Explanation` identificam a primeira técnica aplicável e seu texto localizado.
 - `Highlights` é um mapa imutável de `HintHighlightRole` para posições: `Pattern` identifica o padrão, `Scope` a região/cage de apoio, `Target` o alvo de uma colocação e `Affected` as células das eliminações.
+- `RelevantDigits` lista os dígitos do raciocínio quando sua exposição é segura para o nível pedido.
+- `PatternCandidates` lista pares posição/dígito exatos que estabelecem o padrão, sem classificá-los como removíveis.
+- `ScopeContext` preserva o contexto tipado da região/cage e, quando aplicável, os alvos relacionados ou o resíduo da Rule of 45.
 - `InvolvedCandidates` contém pares posição/dígito relevantes para um passo de eliminação sem classificá-los como removíveis.
 - `Action` fica nula antes do nível 3. No nível 3 é exatamente `HintAction.PlaceValue(Position, Value)` ou `HintAction.RemoveCandidates(Candidates)`; a lista de remoções é não vazia, distinta e ordenada row-major por posição e depois por dígito.
+- `Explanation` combina o texto geral da técnica com o escopo, dígitos e pares do padrão aplicáveis ao nível solicitado, em português.
 
 ## Resultado
 
@@ -45,9 +49,9 @@ Para `Available`, o conteúdo segue estas regras:
 
 | Nível | Conteúdo |
 |---|---|
-| 1 | ID/nome da técnica e explicação em português. `Highlights`, `InvolvedCandidates` e `Action` ficam vazios/nulos. |
-| 2 | Nível 1 mais `Highlights` e candidatos envolvidos. Não declara que um dígito deve ser colocado ou que candidatos devem ser removidos. |
-| 3 | Níveis anteriores mais exatamente uma ação tipada: `PlaceValue` ou `RemoveCandidates`. |
+| 1 | ID/nome da técnica e explicação geral em português. Posições, dígitos, pares do padrão, `ScopeContext`, `InvolvedCandidates` e `Action` ficam vazios/nulos. |
+| 2 | Nível 1 mais `Highlights`, candidatos envolvidos e `ScopeContext`. Em passos de eliminação também inclui `RelevantDigits` e `PatternCandidates`; em colocações esses campos ficam vazios para não revelar o valor. Não declara que um dígito deve ser colocado ou que candidatos devem ser removidos. |
+| 3 | Conteúdo tipado permitido do padrão, incluindo dígitos e pares posição/dígito, mais exatamente uma ação: `PlaceValue` ou `RemoveCandidates`. |
 
 Uma técnica de eliminação pode ser avançada até o nível 3 sem produzir colocação: sua ação é `RemoveCandidates`. Uma colocação só pode ser divulgada no nível 3 quando a multiplicidade do puzzle original for `Unique` e o valor coincidir com a solução confirmada. A unicidade de uma busca restrita às jogadas atuais não altera a multiplicidade original.
 
