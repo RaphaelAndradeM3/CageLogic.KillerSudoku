@@ -4,6 +4,7 @@ using CageLogic.Infrastructure.Logging;
 
 using CageLogic.Application.Candidates;
 using CageLogic.Application.Generation;
+using CageLogic.Application.Hints;
 using CageLogic.Application.Moves;
 using CageLogic.Application.Validation;
 using CageLogic.Maui.ViewModels;
@@ -25,6 +26,7 @@ public static class MauiProgram
 		}));
 		builder.Services.AddSingleton<Logging.HostExceptionBoundary>();
 		builder.Services.AddSingleton<GeneratePuzzleUseCase>();
+		builder.Services.AddSingleton<GetHintUseCase>();
 		builder.Services.AddSingleton<ApplyMoveUseCase>();
 		builder.Services.AddSingleton<GetCandidatesUseCase>();
 		builder.Services.AddSingleton<ValidateBoardUseCase>();
@@ -33,6 +35,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<HomePage>();
 		builder.Services.AddTransient<GamePageViewModel>();
 		builder.Services.AddTransient<GamePage>();
+		builder.Services.AddTransient<SessionSummaryPage>();
 		builder.Services.AddSingleton<AppShell>();
 		builder
 			.UseMauiApp<App>()

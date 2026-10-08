@@ -54,15 +54,72 @@ public sealed class KillerSudokuBoardDrawable : IDrawable
 				canvas.FillColor = Color.FromArgb("#DFECFA");
 				canvas.FillRectangle(bounds);
 			}
+			DrawHintRoles(canvas, bounds, geometry.CellSize, cell);
 
-			if (cell.Value is not int value)
+			if (cell.Value is int value)
+			{
+				canvas.Font = Microsoft.Maui.Graphics.Font.Default;
+				canvas.FontSize = geometry.CellSize * 0.52f;
+				canvas.FontColor = cell.IsGiven ? Color.FromArgb("#24364B") : Color.FromArgb("#245DA0");
+				canvas.DrawString(value.ToString(), bounds, HorizontalAlignment.Center, VerticalAlignment.Center);
 				continue;
+			}
 
-			canvas.Font = Microsoft.Maui.Graphics.Font.Default;
-			canvas.FontSize = geometry.CellSize * 0.52f;
-			canvas.FontColor = cell.IsGiven ? Color.FromArgb("#24364B") : Color.FromArgb("#245DA0");
-			canvas.DrawString(value.ToString(), bounds, HorizontalAlignment.Center, VerticalAlignment.Center);
+			DrawNotes(canvas, bounds, geometry.CellSize, cell.Notes);
 		}
+	}
+
+	private static void DrawNotes(ICanvas canvas, RectF bounds, float cellSize, IReadOnlyList<int> notes)
+	{
+		if (notes.Count == 0)
+			return;
+		canvas.Font = Microsoft.Maui.Graphics.Font.Default;
+		canvas.FontSize = Math.Max(6f, cellSize * 0.17f);
+		canvas.FontColor = Color.FromArgb("#526174");
+		var slotSize = cellSize / 3f;
+		foreach (var digit in notes)
+		{
+			var index = digit - 1;
+			var noteBounds = new RectF(
+				bounds.Left + (index % 3) * slotSize,
+				bounds.Top + (index / 3) * slotSize,
+				slotSize,
+				slotSize);
+			canvas.DrawString(digit.ToString(), noteBounds, HorizontalAlignment.Center, VerticalAlignment.Center);
+		}
+	}
+
+	private static void DrawHintRoles(ICanvas canvas, RectF bounds, float cellSize, GameSessionCellViewState cell)
+	{
+		if (cell.HintRoles.Count == 0)
+			return;
+
+		canvas.StrokeSize = Math.Max(1.2f, cellSize * 0.045f);
+		canvas.StrokeDashPattern = null;
+		canvas.StrokeColor = Color.FromArgb("#7A4D9C");
+		if (cell.HintRoles.Contains(CageLogic.Application.Hints.HintHighlightRole.Pattern))
+			canvas.DrawRectangle(bounds.Inflate(-cellSize * 0.11f, -cellSize * 0.11f));
+		if (cell.HintRoles.Contains(CageLogic.Application.Hints.HintHighlightRole.Scope))
+		{
+			canvas.StrokeDashPattern = [2f, 2f];
+			canvas.StrokeColor = Color.FromArgb("#2D7191");
+			canvas.DrawRectangle(bounds.Inflate(-cellSize * 0.17f, -cellSize * 0.17f));
+		}
+		if (cell.HintRoles.Contains(CageLogic.Application.Hints.HintHighlightRole.Target))
+		{
+			canvas.StrokeDashPattern = null;
+			canvas.StrokeSize = Math.Max(2f, cellSize * 0.07f);
+			canvas.StrokeColor = Color.FromArgb("#35834C");
+			canvas.DrawRectangle(bounds.Inflate(-cellSize * 0.06f, -cellSize * 0.06f));
+		}
+		if (cell.HintRoles.Contains(CageLogic.Application.Hints.HintHighlightRole.Affected))
+		{
+			canvas.StrokeDashPattern = [3f, 2f];
+			canvas.StrokeSize = Math.Max(1.2f, cellSize * 0.045f);
+			canvas.StrokeColor = Color.FromArgb("#B66728");
+			canvas.DrawRectangle(bounds.Inflate(-cellSize * 0.23f, -cellSize * 0.23f));
+		}
+		canvas.StrokeDashPattern = null;
 	}
 
 	private static void DrawGrid(ICanvas canvas, BoardGeometry geometry)

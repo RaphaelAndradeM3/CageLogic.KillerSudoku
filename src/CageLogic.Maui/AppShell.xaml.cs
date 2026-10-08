@@ -13,5 +13,6 @@ public partial class AppShell : Shell
 			Content = homePage
 		});
 		Routing.RegisterRoute(nameof(CageLogic.Maui.Views.GamePage), typeof(CageLogic.Maui.Views.GamePage));
+		Routing.RegisterRoute(nameof(CageLogic.Maui.Views.SessionSummaryPage), typeof(CageLogic.Maui.Views.SessionSummaryPage));
 	}
 }

@@ -1,6 +1,7 @@
 using CageLogic.Application.Difficulty;
 using CageLogic.Application.GameSessions;
 using CageLogic.Application.Generation;
+using CageLogic.Application.Hints;
 using CageLogic.Maui.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,6 +14,7 @@ public partial class HomeViewModel : ObservableObject
 {
 	private readonly GeneratePuzzleUseCase _generatePuzzle;
 	private readonly GameSessionStore _sessionStore;
+	private readonly GetHintUseCase _getHintUseCase;
 	private readonly ILogger<HomeViewModel> _logger;
 	private CancellationTokenSource? _generationCancellation;
 
@@ -31,10 +33,12 @@ public partial class HomeViewModel : ObservableObject
 	public HomeViewModel(
 		GeneratePuzzleUseCase generatePuzzle,
 		GameSessionStore sessionStore,
+		GetHintUseCase getHintUseCase,
 		ILogger<HomeViewModel> logger)
 	{
 		_generatePuzzle = generatePuzzle;
 		_sessionStore = sessionStore;
+		_getHintUseCase = getHintUseCase;
 		_logger = logger;
 	}
 
@@ -68,7 +72,7 @@ public partial class HomeViewModel : ObservableObject
 			{
 				await MainThread.InvokeOnMainThreadAsync(async () =>
 				{
-					_sessionStore.Start(new GameSession(result.GeneratedPuzzle));
+					_sessionStore.Start(new GameSession(result.GeneratedPuzzle, getHintUseCase: _getHintUseCase));
 					StatusMessage = string.Empty;
 					await Shell.Current.GoToAsync(nameof(GamePage));
 				});

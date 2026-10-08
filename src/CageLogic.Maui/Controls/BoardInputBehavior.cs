@@ -87,7 +87,7 @@ public sealed class BoardInputBehavior : Behavior<ContentPage>
 	private static bool IsSupportedKey(string key, bool controlPressed)
 	{
 		if (controlPressed)
-			return false;
+			return key.Equals("Z", StringComparison.OrdinalIgnoreCase) || key.Equals("Y", StringComparison.OrdinalIgnoreCase);
 
 		return key.Contains("Left", StringComparison.OrdinalIgnoreCase) ||
 			key.Contains("Right", StringComparison.OrdinalIgnoreCase) ||

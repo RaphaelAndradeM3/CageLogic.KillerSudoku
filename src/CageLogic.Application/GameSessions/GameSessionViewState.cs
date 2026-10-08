@@ -1,10 +1,11 @@
 using System.Collections.ObjectModel;
 using CageLogic.Application.Difficulty;
+using CageLogic.Application.Hints;
 using CageLogic.Domain.Board;
 
 namespace CageLogic.Application.GameSessions;
 
-/// <summary>An immutable, presentation-ready snapshot of the active board.</summary>
+/// <summary>An immutable, presentation-ready snapshot of the active board and session controls.</summary>
 public sealed class GameSessionViewState
 {
 	internal GameSessionViewState(
@@ -12,24 +13,50 @@ public sealed class GameSessionViewState
 		CellPosition? selectedPosition,
 		bool isBoardValid,
 		IEnumerable<GameSessionCellViewState> cells,
-		IEnumerable<GameSessionCageViewState> cages)
+		IEnumerable<GameSessionCageViewState> cages,
+		GameInputMode inputMode,
+		bool canUndo,
+		bool canRedo,
+		bool isPaused,
+		TimeSpan activeElapsed,
+		long boardRevision,
+		int errorCount,
+		int displayedHintLevelCount,
+		HintResult? hint,
+		SessionSummary? summary)
 	{
 		Difficulty = difficulty;
 		SelectedPosition = selectedPosition;
 		IsBoardValid = isBoardValid;
 		Cells = new ReadOnlyCollection<GameSessionCellViewState>(cells.ToArray());
 		Cages = new ReadOnlyCollection<GameSessionCageViewState>(cages.ToArray());
+		InputMode = inputMode;
+		CanUndo = canUndo;
+		CanRedo = canRedo;
+		IsPaused = isPaused;
+		ActiveElapsed = activeElapsed;
+		BoardRevision = boardRevision;
+		ErrorCount = errorCount;
+		DisplayedHintLevelCount = displayedHintLevelCount;
+		Hint = hint;
+		Summary = summary;
 	}
 
 	public DifficultyLevel Difficulty { get; }
-
 	public CellPosition? SelectedPosition { get; }
-
 	public bool IsBoardValid { get; }
-
 	public IReadOnlyList<GameSessionCellViewState> Cells { get; }
-
 	public IReadOnlyList<GameSessionCageViewState> Cages { get; }
+	public GameInputMode InputMode { get; }
+	public bool CanUndo { get; }
+	public bool CanRedo { get; }
+	public bool IsPaused { get; }
+	public TimeSpan ActiveElapsed { get; }
+	public long BoardRevision { get; }
+	public int ErrorCount { get; }
+	public int DisplayedHintLevelCount { get; }
+	public HintResult? Hint { get; }
+	public SessionSummary? Summary { get; }
 }
 
 public sealed record GameSessionCellViewState
@@ -39,7 +66,9 @@ public sealed record GameSessionCellViewState
 		int? value,
 		bool isGiven,
 		bool isSelected,
-		bool hasConflict)
+		bool hasConflict,
+		IEnumerable<int> notes,
+		IEnumerable<HintHighlightRole> hintRoles)
 	{
 		Position = position;
 		Value = value;
@@ -47,19 +76,18 @@ public sealed record GameSessionCellViewState
 		IsEditable = !isGiven;
 		IsSelected = isSelected;
 		HasConflict = hasConflict;
+		Notes = Array.AsReadOnly(notes.ToArray());
+		HintRoles = Array.AsReadOnly(hintRoles.Distinct().ToArray());
 	}
 
 	public CellPosition Position { get; }
-
 	public int? Value { get; }
-
 	public bool IsGiven { get; }
-
 	public bool IsEditable { get; }
-
 	public bool IsSelected { get; }
-
 	public bool HasConflict { get; }
+	public IReadOnlyList<int> Notes { get; }
+	public IReadOnlyList<HintHighlightRole> HintRoles { get; }
 }
 
 public sealed record GameSessionCageViewState
@@ -71,6 +99,5 @@ public sealed record GameSessionCageViewState
 	}
 
 	public int TargetSum { get; }
-
 	public IReadOnlyList<CellPosition> Positions { get; }
 }

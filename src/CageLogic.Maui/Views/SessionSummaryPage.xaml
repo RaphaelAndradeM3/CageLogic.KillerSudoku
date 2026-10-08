@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CageLogic.Maui.Views.SessionSummaryPage"
+             Title="Resumo da partida"
+             BackgroundColor="#F5F6F8">
+    <VerticalStackLayout Padding="24" Spacing="18" MaximumWidthRequest="520" HorizontalOptions="Center" VerticalOptions="Center">
+        <Label Text="Partida concluída" FontSize="28" FontAttributes="Bold" TextColor="#14243A"
+               SemanticProperties.HeadingLevel="Level1" />
+        <Label Text="O tabuleiro corresponde à solução confirmada." FontSize="16" TextColor="#334F70" />
+        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+            <Label Text="Dificuldade" FontAttributes="Bold" TextColor="#25354A" />
+            <Label Grid.Column="1" Text="{Binding Summary.Difficulty}" TextColor="#25354A" />
+            <Label Grid.Row="1" Text="Tempo ativo" FontAttributes="Bold" TextColor="#25354A" />
+            <Label Grid.Row="1" Grid.Column="1" Text="{Binding Summary.ActiveTime, StringFormat='{0:hh\\:mm\\:ss}'}" TextColor="#25354A" />
+            <Label Grid.Row="2" Text="Jogadas conflitantes" FontAttributes="Bold" TextColor="#25354A" />
+            <Label Grid.Row="2" Grid.Column="1" Text="{Binding Summary.ErrorCount}" TextColor="#25354A" />
+            <Label Grid.Row="3" Text="Níveis de dica exibidos" FontAttributes="Bold" TextColor="#25354A" />
+            <Label Grid.Row="3" Grid.Column="1" Text="{Binding Summary.DisplayedHintLevelCount}" TextColor="#25354A" />
+        </Grid>
+        <Button Text="Voltar ao início" Clicked="OnHomeClicked" BackgroundColor="#DDEBDD" TextColor="#1D542A"
+                SemanticProperties.Hint="Volta para escolher uma nova partida" />
+    </VerticalStackLayout>
+</ContentPage>
