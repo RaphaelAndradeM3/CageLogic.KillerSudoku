@@ -2,9 +2,12 @@
   <Folder Name="/src/">
     <Project Path="src/CageLogic.Application/CageLogic.Application.csproj" />
     <Project Path="src/CageLogic.Domain/CageLogic.Domain.csproj" />
+    <Project Path="src/CageLogic.Infrastructure/CageLogic.Infrastructure.csproj" />
+    <Project Path="src/CageLogic.Maui/CageLogic.Maui.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj" />
     <Project Path="tests/CageLogic.Domain.Tests/CageLogic.Domain.Tests.csproj" />
+    <Project Path="tests/CageLogic.Infrastructure.Tests/CageLogic.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
