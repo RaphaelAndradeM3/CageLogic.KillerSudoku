@@ -33,9 +33,9 @@ description: "Task list for implementing the Killer Sudoku game session"
 
 **Purpose**: Complete safe logging and host exception handling before either story relies on the host.
 
-- [ ] T005 Add NUnit tests for separate daily message/error logs, timestamp/offset and correlation fields, configurable retention, sensitive-data exclusion, and logger fallback in `tests/CageLogic.Infrastructure.Tests/Logging/DailyFileLoggingTests.cs`.
-- [ ] T006 Implement configurable daily Serilog sinks for separate messages/errors under app-data `logs` by default, timestamp/offset, structured context/correlation, retention/timezone and safe fallback through `Microsoft.Extensions.Logging` in `src/CageLogic.Infrastructure/Logging/SerilogLoggingConfiguration.cs` and `src/CageLogic.Infrastructure/Logging/LoggingOptions.cs`.
-- [ ] T007 Register the logger in the real MAUI composition root and handle unexpected/unobserved host exceptions once, with correlation and a generic player-safe message, in `src/CageLogic.Maui/MauiProgram.cs` and `src/CageLogic.Maui/App.xaml.cs`.
+- [X] T005 Add NUnit tests for separate daily message/error logs, timestamp/offset and correlation fields, configurable retention, sensitive-data exclusion, and logger fallback in `tests/CageLogic.Infrastructure.Tests/Logging/DailyFileLoggingTests.cs`.
+- [X] T006 Implement configurable daily Serilog sinks for separate messages/errors under app-data `logs` by default, timestamp/offset, structured context/correlation, retention/timezone and safe fallback through `Microsoft.Extensions.Logging` in `src/CageLogic.Infrastructure/Logging/SerilogLoggingConfiguration.cs` and `src/CageLogic.Infrastructure/Logging/LoggingOptions.cs`.
+- [X] T007 Register the logger in the real MAUI composition root and handle unexpected/unobserved host exceptions once, with correlation and a generic player-safe message, in `src/CageLogic.Maui/MauiProgram.cs` and `src/CageLogic.Maui/App.xaml.cs`.
 
 **Checkpoint**: Host and Infrastructure projects are in the solution; unexpected failures have a safe host boundary and local structured logging.
 
