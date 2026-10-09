@@ -83,4 +83,20 @@ public sealed class ActiveGameTimer
 			_isPaused = false;
 		}
 	}
+
+	internal void RestorePaused(TimeSpan accumulated)
+	{
+		if (accumulated < TimeSpan.Zero)
+			throw new ArgumentOutOfRangeException(nameof(accumulated));
+
+		lock (_sync)
+		{
+			if (_hasStarted || _activeSince.HasValue)
+				throw new InvalidOperationException("The timer can only be restored before it starts.");
+
+			_accumulated = accumulated;
+			_isPaused = true;
+			_hasStarted = true;
+		}
+	}
 }

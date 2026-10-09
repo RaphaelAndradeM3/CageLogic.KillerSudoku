@@ -21,5 +21,11 @@ public interface IGameProgressStore
 		GameProgressRecord abandonedRecord,
 		CancellationToken cancellationToken = default);
 
+	/// <summary>Moves an unreadable active row to history after the player explicitly confirms replacement.</summary>
+	Task<GameProgressWriteResult> AbandonUnrecoverableActiveAsync(
+		Guid sessionId,
+		DateTimeOffset abandonedAtUtc,
+		CancellationToken cancellationToken = default);
+
 	Task<IReadOnlyList<GameProgressRecord>> GetRecordsAsync(CancellationToken cancellationToken = default);
 }

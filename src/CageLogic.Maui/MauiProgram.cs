@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Maui.LifecycleEvents;
 
 using CageLogic.Infrastructure.Logging;
 
@@ -11,6 +10,8 @@ using CageLogic.Application.GameSessions;
 using CageLogic.Application.Hints;
 using CageLogic.Application.Moves;
 using CageLogic.Application.Validation;
+using CageLogic.Application.Progression;
+using CageLogic.Infrastructure.Progression;
 using CageLogic.Maui.ViewModels;
 using CageLogic.Maui.Views;
 
@@ -21,6 +22,10 @@ public static class MauiProgram
 	public static MauiApp CreateMauiApp()
 	{
 		var builder = MauiApp.CreateBuilder();
+		Directory.CreateDirectory(FileSystem.AppDataDirectory);
+		var progressionConnectionFactory = new SqliteConnectionFactory(
+			Path.Combine(FileSystem.AppDataDirectory, "progression.db"));
+		new SqliteSchemaMigrator(progressionConnectionFactory).Migrate();
 		builder.Logging.ClearProviders();
 		builder.Logging.AddProvider(SerilogLoggingConfiguration.CreateLoggerProvider(new LoggingOptions
 		{
@@ -34,8 +39,14 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ApplyMoveUseCase>();
 		builder.Services.AddSingleton<GetCandidatesUseCase>();
 		builder.Services.AddSingleton<ValidateBoardUseCase>();
+		builder.Services.AddSingleton<IGameProgressStore, SqliteGameProgressStore>();
+		builder.Services.AddSingleton<CreateGameProgressUseCase>();
+		builder.Services.AddSingleton<LoadActiveGameUseCase>();
+		builder.Services.AddSingleton<SaveGameProgressUseCase>();
+		builder.Services.AddSingleton<CompleteGameProgressUseCase>();
+		builder.Services.AddSingleton<AbandonGameProgressUseCase>();
+		builder.Services.AddSingleton<SqliteConnectionFactory>(progressionConnectionFactory);
 		builder.Services.AddSingleton<GameSessionStore>();
-		builder.Services.AddTransient<GameSessionCommandQueue>();
 		builder.Services.AddSingleton<HomeViewModel>();
 		builder.Services.AddSingleton<HomePage>();
 		builder.Services.AddTransient<GamePageViewModel>();
@@ -43,17 +54,6 @@ public static class MauiProgram
 		builder.Services.AddTransient<SessionSummaryPage>();
 		builder.Services.AddSingleton<AppShell>();
 		builder
-			.ConfigureLifecycleEvents(events =>
-			{
-#if ANDROID
-				events.AddAndroid(android => android.OnPause(_ =>
-				{
-					var session = Microsoft.Maui.IPlatformApplication.Current?
-						.Services.GetService<GameSessionStore>()?.Current;
-					session?.PauseForBackground();
-				}));
-#endif
-			})
 			.UseMauiApp<App>()
 			.ConfigureFonts(fonts =>
 			{

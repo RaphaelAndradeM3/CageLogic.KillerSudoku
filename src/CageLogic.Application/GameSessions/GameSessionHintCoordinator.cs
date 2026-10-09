@@ -22,12 +22,16 @@ public sealed class GameSessionHintCoordinator
 		HintPuzzleContext puzzleContext,
 		Func<HintBoardSnapshot> getCurrentBoard,
 		GetHintUseCase? getHintUseCase = null,
-		Func<HintRequest, CancellationToken, Task<HintResult>>? execute = null)
+		Func<HintRequest, CancellationToken, Task<HintResult>>? execute = null,
+		int initialDisplayedHintLevelCount = 0)
 	{
 		ArgumentNullException.ThrowIfNull(puzzleContext);
 		ArgumentNullException.ThrowIfNull(getCurrentBoard);
+		if (initialDisplayedHintLevelCount < 0)
+			throw new ArgumentOutOfRangeException(nameof(initialDisplayedHintLevelCount));
 		_puzzleContext = puzzleContext;
 		_getCurrentBoard = getCurrentBoard;
+		_displayedHintLevelCount = initialDisplayedHintLevelCount;
 		var useCase = getHintUseCase ?? new GetHintUseCase();
 		_execute = execute ?? useCase.ExecuteAsync;
 	}

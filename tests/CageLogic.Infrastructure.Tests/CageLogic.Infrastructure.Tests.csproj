@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\CageLogic.Application\CageLogic.Application.csproj" />
     <ProjectReference Include="..\..\src\CageLogic.Infrastructure\CageLogic.Infrastructure.csproj" />
   </ItemGroup>
 

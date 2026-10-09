@@ -32,12 +32,13 @@ public partial class GamePage : ContentPage
 		base.OnAppearing();
 		_viewModel.Session.Start();
 		if (Window is not null)
-			_lifecycle.Attach(Window, _viewModel.Session);
+			_lifecycle.Attach(Window, _viewModel.Session, _viewModel.PersistOnPauseAsync);
 	}
 
-	protected override void OnDisappearing()
+	protected override async void OnDisappearing()
 	{
-		_lifecycle.Detach(pause: true);
+		_lifecycle.Detach(pause: false);
+		await _viewModel.PersistOnPauseAsync();
 		base.OnDisappearing();
 	}
 
@@ -68,14 +69,23 @@ public partial class GamePage : ContentPage
 		if (eventArgs.PropertyName == nameof(GamePageViewModel.ViewState))
 		{
 			BoardView.SetViewState(_viewModel.ViewState);
-			if (_viewModel.ViewState.Summary is not null && !_summaryNavigationStarted)
-			{
-				_summaryNavigationStarted = true;
-				MainThread.BeginInvokeOnMainThread(async () =>
-					await RunRecoverableActionAsync(() => Shell.Current.GoToAsync(nameof(SessionSummaryPage))));
-			}
 		}
+
+		if (eventArgs.PropertyName is nameof(GamePageViewModel.ViewState) or nameof(GamePageViewModel.IsCompletionPersisted))
+			NavigateToSummaryAfterCommit();
 	}
+
+	private void NavigateToSummaryAfterCommit()
+	{
+		if (_viewModel.ViewState.Summary is null || !_viewModel.IsCompletionPersisted || _summaryNavigationStarted)
+			return;
+		_summaryNavigationStarted = true;
+		MainThread.BeginInvokeOnMainThread(async () =>
+			await RunRecoverableActionAsync(() => Shell.Current.GoToAsync(nameof(SessionSummaryPage))));
+	}
+
+	private async void OnAbandonClicked(object? sender, EventArgs eventArgs) =>
+		await RunRecoverableActionAsync(() => _viewModel.AbandonCommand.ExecuteAsync(null));
 
 	private async void OnDigitClicked(object? sender, EventArgs eventArgs)
 	{

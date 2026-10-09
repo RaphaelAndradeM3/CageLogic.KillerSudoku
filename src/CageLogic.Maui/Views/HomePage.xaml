@@ -12,6 +12,13 @@
                    FontSize="16" TextColor="#526174" />
             <Border Padding="18" BackgroundColor="White" Stroke="#DEE4EC" StrokeShape="RoundRectangle 16">
                 <VerticalStackLayout Spacing="14">
+                    <HorizontalStackLayout Spacing="10" IsVisible="{Binding IsInitializing}">
+                        <ActivityIndicator IsRunning="{Binding IsInitializing}" Color="#315F9D" />
+                        <Label Text="Verificando partida salva..." TextColor="#526174" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Button Text="Continuar partida salva" Command="{Binding ResumeActiveGameCommand}"
+                            IsVisible="{Binding HasActiveGame}"
+                            SemanticProperties.Hint="Retoma a Ãºltima partida salva com o cronÃ´metro pausado" />
                     <Label Text="Dificuldade" FontSize="15" FontAttributes="Bold" TextColor="#25354A" />
                     <Picker Title="Escolha a dificuldade"
                             ItemsSource="{Binding Difficulties}"

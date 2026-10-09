@@ -39,7 +39,8 @@ public enum GameProgressLoadStatus
 public sealed record GameProgressLoadResult(
 	GameProgressLoadStatus Status,
 	SavedGameSession? Session = null,
-	string? RecoveryReason = null)
+	string? RecoveryReason = null,
+	GameProgressRecord? Record = null)
 {
 	public static GameProgressLoadResult Loaded(SavedGameSession session) =>
 		new(GameProgressLoadStatus.Loaded, session);
@@ -47,8 +48,8 @@ public sealed record GameProgressLoadResult(
 	public static GameProgressLoadResult NoActiveSession() =>
 		new(GameProgressLoadStatus.NoActiveSession);
 
-	public static GameProgressLoadResult RecoveryRequired(string reason) =>
-		new(GameProgressLoadStatus.RecoveryRequired, RecoveryReason: reason);
+	public static GameProgressLoadResult RecoveryRequired(string reason, GameProgressRecord? record = null) =>
+		new(GameProgressLoadStatus.RecoveryRequired, RecoveryReason: reason, Record: record);
 }
 
 public enum GameProgressWriteStatus

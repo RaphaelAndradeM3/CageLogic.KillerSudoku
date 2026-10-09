@@ -23,6 +23,13 @@
 
             <Label Text="{Binding StatusMessage}" TextColor="#9A3D35" FontSize="13"
                    SemanticProperties.Description="Estado da entrada" />
+            <Label Text="{Binding PersistenceStatus}" TextColor="#526174" FontSize="12"
+                   SemanticProperties.Description="Estado do salvamento local da partida" />
+            <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsSaving}">
+                <ActivityIndicator IsRunning="{Binding IsSaving}" Color="#315F9D" />
+                <Label Text="Salvando..." TextColor="#526174" VerticalOptions="Center"
+                       SemanticProperties.Description="A alteração está sendo salva e ainda não foi confirmada." />
+            </HorizontalStackLayout>
             <Label Text="{Binding HintMessage}" TextColor="#334F70" FontSize="14"
                    SemanticProperties.Description="Explicação da dica" />
 
@@ -65,10 +72,13 @@
                 <Button Text="Apagar célula selecionada" Command="{Binding ClearSelectedCommand}"
                         BackgroundColor="#E8EDF4" TextColor="#25354A"
                         SemanticProperties.Hint="Apaga a resposta ou as notas da célula selecionada" />
-                <Button Grid.Column="1" Text="Concluir partida" Command="{Binding CompleteCommand}"
+                <Button Grid.Column="1" Text="{Binding CompleteButtonText}" Command="{Binding CompleteCommand}"
                         BackgroundColor="#DDEBDD" TextColor="#1D542A"
                         SemanticProperties.Hint="Valida e conclui a partida quando a solução estiver correta" />
             </Grid>
+            <Button Text="Abandonar partida" Clicked="OnAbandonClicked"
+                    BackgroundColor="#F4E1DF" TextColor="#782F2A"
+                    SemanticProperties.Hint="Pede confirmação e registra a partida como abandonada" />
             <Label Text="Use as setas para mover a seleção. Ctrl+Z desfaz e Ctrl+Y refaz. Conflitos e destaques de dica também são descritos para leitores de tela."
                    FontSize="12" TextColor="#526174" SemanticProperties.Description="Instruções de teclado e acessibilidade" />
         </VerticalStackLayout>
