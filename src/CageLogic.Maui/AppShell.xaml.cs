@@ -14,5 +14,7 @@ public partial class AppShell : Shell
 		});
 		Routing.RegisterRoute(nameof(CageLogic.Maui.Views.GamePage), typeof(CageLogic.Maui.Views.GamePage));
 		Routing.RegisterRoute(nameof(CageLogic.Maui.Views.SessionSummaryPage), typeof(CageLogic.Maui.Views.SessionSummaryPage));
+		Routing.RegisterRoute(nameof(CageLogic.Maui.Views.ProgressionStatisticsPage), typeof(CageLogic.Maui.Views.ProgressionStatisticsPage));
+		Routing.RegisterRoute(nameof(CageLogic.Maui.Views.ThemeSettingsPage), typeof(CageLogic.Maui.Views.ThemeSettingsPage));
 	}
 }

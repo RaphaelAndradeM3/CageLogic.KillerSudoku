@@ -71,17 +71,17 @@ description: "Tarefas de implementação da feature Persistência Offline e Prog
 
 ### Tests for User Story 2
 
-- [ ] T018 [P] [US2] Escrever testes de agregação para histórico vazio, partidas concluídas, ativas e abandonadas, tempos apenas de concluídas, erros/dicas e idempotência em `tests/CageLogic.Application.Tests/Progression/GetProgressionStatisticsUseCaseTests.cs`.
-- [ ] T019 [P] [US2] Escrever testes da preferência para valor ausente, tema claro e tema escuro em `tests/CageLogic.Application.Tests/Progression/ThemePreferenceUseCaseTests.cs`.
+- [X] T018 [P] [US2] Escrever testes de agregação para histórico vazio, partidas concluídas, ativas e abandonadas, tempos apenas de concluídas, erros/dicas e idempotência em `tests/CageLogic.Application.Tests/Progression/GetProgressionStatisticsUseCaseTests.cs`.
+- [X] T019 [P] [US2] Escrever testes da preferência para valor ausente, tema claro e tema escuro em `tests/CageLogic.Application.Tests/Progression/ThemePreferenceUseCaseTests.cs`.
 
 ### Implementation for User Story 2
 
-- [ ] T020 [P] [US2] Implementar consulta de estatísticas sem cache mutável em `src/CageLogic.Application/Progression/GetProgressionStatisticsUseCase.cs`; contar todos os registros como iniciados, somente Completed como concluídos, calcular média/melhor apenas de Completed e incluir erros/dicas dos registros iniciados (depende de T018 e T017).
-- [ ] T021 [P] [US2] Definir `IThemePreferenceStore` e o caso de uso para carregar Light/Dark ou acompanhar o sistema sem valor salvo em `src/CageLogic.Application/Progression/IThemePreferenceStore.cs` e `src/CageLogic.Application/Progression/ThemePreferenceUseCase.cs` (depende de T019).
-- [ ] T022 [US2] Implementar o adaptador de `IThemePreferenceStore` com Preferences do MAUI em `src/CageLogic.Maui/Preferences/MauiThemePreferenceStore.cs` (depende de T021).
-- [ ] T023 [P] [US2] Criar ViewModel e tela de estatísticas com estado vazio e rótulos acessíveis em `src/CageLogic.Maui/ViewModels/ProgressionStatisticsViewModel.cs`, `src/CageLogic.Maui/Views/ProgressionStatisticsPage.xaml` e `src/CageLogic.Maui/Views/ProgressionStatisticsPage.xaml.cs` (depende de T020).
-- [ ] T024 [P] [US2] Criar ViewModel e controles de tema claro/escuro que atualizam imediatamente o tema aplicado e oferecem estado acessível em `src/CageLogic.Maui/ViewModels/ThemeSettingsViewModel.cs`, `src/CageLogic.Maui/Views/ThemeSettingsPage.xaml` e `src/CageLogic.Maui/Views/ThemeSettingsPage.xaml.cs` (depende de T021).
-- [ ] T025 [US2] Registrar store, casos de uso e telas, carregar e aplicar a preferência salva antes de exibir a primeira página e adicionar navegação para estatísticas e tema em `src/CageLogic.Maui/MauiProgram.cs`, `src/CageLogic.Maui/App.xaml.cs` e `src/CageLogic.Maui/AppShell.xaml.cs` (depende de T022–T024).
+- [X] T020 [P] [US2] Implementar consulta de estatísticas sem cache mutável em `src/CageLogic.Application/Progression/GetProgressionStatisticsUseCase.cs`; contar todos os registros como iniciados, somente Completed como concluídos, calcular média/melhor apenas de Completed e incluir erros/dicas dos registros iniciados (depende de T018 e T017).
+- [X] T021 [P] [US2] Definir `IThemePreferenceStore` e o caso de uso para carregar Light/Dark ou acompanhar o sistema sem valor salvo em `src/CageLogic.Application/Progression/IThemePreferenceStore.cs` e `src/CageLogic.Application/Progression/ThemePreferenceUseCase.cs` (depende de T019).
+- [X] T022 [US2] Implementar o adaptador de `IThemePreferenceStore` com Preferences do MAUI em `src/CageLogic.Maui/Preferences/MauiThemePreferenceStore.cs` (depende de T021).
+- [X] T023 [P] [US2] Criar ViewModel e tela de estatísticas com estado vazio e rótulos acessíveis em `src/CageLogic.Maui/ViewModels/ProgressionStatisticsViewModel.cs`, `src/CageLogic.Maui/Views/ProgressionStatisticsPage.xaml` e `src/CageLogic.Maui/Views/ProgressionStatisticsPage.xaml.cs` (depende de T020).
+- [X] T024 [P] [US2] Criar ViewModel e controles de tema claro/escuro que atualizam imediatamente o tema aplicado e oferecem estado acessível em `src/CageLogic.Maui/ViewModels/ThemeSettingsViewModel.cs`, `src/CageLogic.Maui/Views/ThemeSettingsPage.xaml` e `src/CageLogic.Maui/Views/ThemeSettingsPage.xaml.cs` (depende de T021).
+- [X] T025 [US2] Registrar store, casos de uso e telas, carregar e aplicar a preferência salva antes de exibir a primeira página e adicionar navegação para estatísticas e tema em `src/CageLogic.Maui/MauiProgram.cs`, `src/CageLogic.Maui/App.xaml.cs` e `src/CageLogic.Maui/AppShell.xaml.cs` (depende de T022–T024).
 
 **Checkpoint**: estatísticas refletem os registros persistidos, o estado vazio é definido e a preferência local de tema reaparece após reinício.
 

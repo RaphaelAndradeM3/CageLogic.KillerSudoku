@@ -295,6 +295,32 @@ public partial class HomeViewModel : ObservableObject
 	[RelayCommand]
 	private void CancelGeneration() => _generationCancellation?.Cancel();
 
+	[RelayCommand]
+	private async Task OpenStatisticsAsync()
+	{
+		try
+		{
+			await Shell.Current.GoToAsync(nameof(ProgressionStatisticsPage));
+		}
+		catch (Exception exception)
+		{
+			ReportFailure(exception, "Opening progression statistics failed");
+		}
+	}
+
+	[RelayCommand]
+	private async Task OpenThemeSettingsAsync()
+	{
+		try
+		{
+			await Shell.Current.GoToAsync(nameof(ThemeSettingsPage));
+		}
+		catch (Exception exception)
+		{
+			ReportFailure(exception, "Opening theme settings failed");
+		}
+	}
+
 	private void ReportFailure(Exception exception, string operation)
 	{
 		var correlationId = Guid.NewGuid().ToString("N");

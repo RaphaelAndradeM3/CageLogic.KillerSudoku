@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CageLogic.Maui.Views.ThemeSettingsPage"
+             Title="Tema">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="18" MaximumWidthRequest="560" HorizontalOptions="Center">
+            <Label Text="Aparência" FontSize="30" FontAttributes="Bold"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Escolha como o Killer Sudoku aparece neste dispositivo."
+                   SemanticProperties.Description="Preferência visual do aplicativo" />
+            <Label Text="{Binding CurrentThemeDescription}" FontSize="16"
+                   SemanticProperties.Description="Tema aplicado atualmente" />
+            <Button Text="{Binding SystemButtonText}" Command="{Binding UseSystemThemeCommand}"
+                    SemanticProperties.Hint="Remove a preferência salva e acompanha claro ou escuro do sistema" />
+            <Button Text="{Binding LightButtonText}" Command="{Binding UseLightThemeCommand}"
+                    SemanticProperties.Hint="Aplica e salva o tema claro" />
+            <Button Text="{Binding DarkButtonText}" Command="{Binding UseDarkThemeCommand}"
+                    SemanticProperties.Hint="Aplica e salva o tema escuro" />
+            <Label Text="{Binding StatusMessage}"
+                   SemanticProperties.Description="Estado do salvamento da preferência de tema" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

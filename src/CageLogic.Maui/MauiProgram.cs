@@ -14,6 +14,7 @@ using CageLogic.Application.Progression;
 using CageLogic.Infrastructure.Progression;
 using CageLogic.Maui.ViewModels;
 using CageLogic.Maui.Views;
+using CageLogic.Maui.Preferences;
 
 namespace CageLogic.Maui;
 
@@ -45,6 +46,9 @@ public static class MauiProgram
 		builder.Services.AddSingleton<SaveGameProgressUseCase>();
 		builder.Services.AddSingleton<CompleteGameProgressUseCase>();
 		builder.Services.AddSingleton<AbandonGameProgressUseCase>();
+		builder.Services.AddSingleton<GetProgressionStatisticsUseCase>();
+		builder.Services.AddSingleton<IThemePreferenceStore, MauiThemePreferenceStore>();
+		builder.Services.AddSingleton<ThemePreferenceUseCase>();
 		builder.Services.AddSingleton<SqliteConnectionFactory>(progressionConnectionFactory);
 		builder.Services.AddSingleton<GameSessionStore>();
 		builder.Services.AddSingleton<HomeViewModel>();
@@ -52,6 +56,10 @@ public static class MauiProgram
 		builder.Services.AddTransient<GamePageViewModel>();
 		builder.Services.AddTransient<GamePage>();
 		builder.Services.AddTransient<SessionSummaryPage>();
+		builder.Services.AddTransient<ProgressionStatisticsViewModel>();
+		builder.Services.AddTransient<ProgressionStatisticsPage>();
+		builder.Services.AddTransient<ThemeSettingsViewModel>();
+		builder.Services.AddTransient<ThemeSettingsPage>();
 		builder.Services.AddSingleton<AppShell>();
 		builder
 			.UseMauiApp<App>()

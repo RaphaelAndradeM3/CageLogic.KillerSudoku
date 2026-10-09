@@ -27,7 +27,11 @@ public partial class KillerSudokuBoardView : ContentView
 	public void SetViewState(GameSessionViewState viewState)
 	{
 		ArgumentNullException.ThrowIfNull(viewState);
-		_drawable.Update(viewState);
+		var application = global::Microsoft.Maui.Controls.Application.Current;
+		var isDarkTheme = application is not null
+			&& (application.UserAppTheme == AppTheme.Dark
+				|| (application.UserAppTheme == AppTheme.Unspecified && application.RequestedTheme == AppTheme.Dark));
+		_drawable.Update(viewState, isDarkTheme);
 		BoardCanvas.Invalidate();
 		foreach (var cell in viewState.Cells)
 		{
