@@ -70,9 +70,12 @@ public partial class HomeViewModel : ObservableObject
 
 			if (result.IsSuccess && result.GeneratedPuzzle is not null)
 			{
+				var session = await Task.Run(
+					() => new GameSession(result.GeneratedPuzzle, getHintUseCase: _getHintUseCase))
+					.ConfigureAwait(false);
 				await MainThread.InvokeOnMainThreadAsync(async () =>
 				{
-					_sessionStore.Start(new GameSession(result.GeneratedPuzzle, getHintUseCase: _getHintUseCase));
+					_sessionStore.Start(session);
 					StatusMessage = string.Empty;
 					await Shell.Current.GoToAsync(nameof(GamePage));
 				});

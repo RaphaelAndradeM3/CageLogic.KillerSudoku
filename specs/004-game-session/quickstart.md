@@ -37,3 +37,20 @@ Executar cada fluxo em Windows e Android, online e offline:
 9. Inspecionar logs sob a pasta de dados da aplicação: rotação diária, arquivos separados, contexto/correlation ID e ausência de valores sensíveis; simular falha do logger e verificar fallback seguro.
 10. Usar TalkBack no Android e Narrator no Windows para percorrer todas as 81 células e controles, ouvir coordenada/valor/estado/notas/conflito/dica e operar sem depender de cor.
 11. Durante validação de jogadas e cálculo completo de candidatos, confirmar que a interface continua processando navegação e entrada sem executar esses cálculos na thread de UI. Durante geração e dica, confirmar que o estado de carregamento aparece sem bloquear a interface e que seleção/edição continuam processáveis enquanto a dica está pendente. Registrar modelo/configuração do dispositivo, versão do sistema e p95 de entrada/realce de célula, validação/auto-candidates e resposta da interface durante geração/dica como linha de base; propor um limite numérico somente após medir os alvos reais.
+
+## Registro de execução (parcial, 2026-10-08)
+
+Este registro contém evidências parciais; não substitui a aceitação manual completa de Windows e Android exigida por T032.
+
+| Verificação | Resultado |
+|---|---|
+| Build Release | Passou com 0 avisos e 0 erros nos projetos da solution, incluindo os targets Android e Windows. A restauração foi feita pelo cache NuGet local após falha de autenticação nos feeds. |
+| Testes NUnit | 138 aprovados, 0 falhas, 0 ignorados. |
+| Android AVD | APK instalado e app aberto no perfil `pixel_7_-_api_36_0` (`sdk_gphone64_x86_64`, Android 16/API 36). A geração Easy abriu a página da partida. |
+| Células semânticas | A árvore UIAutomator apresentou 81 IDs `BoardCell_*` com posição e estado de valor/notas/seleção/conflito/dica. TalkBack falado não foi exercitado. |
+| Candidatos e histórico | Entrada de nota, Undo/Redo, auto-fill e Undo do auto-fill foram exercitados por ADB; a nota foi removida/restaurada como esperado. |
+| Pausa explícita | O botão alternou para “Retomar tempo”; o tempo exibido permaneceu igual durante a pausa e voltou a avançar após Retomar. |
+| Retorno do background | Inconclusivo: após Home e retorno, o botão ainda indicava “Pausar tempo”. O AVD apresentou “System UI isn't responding” e a ponte de acessibilidade falhou; repetir em ambiente estável antes de aprovar o ciclo de vida. |
+| Offline, TalkBack, Narrator e p95 | Não verificados. A tentativa de modo avião foi limitada pela permissão de broadcast do Android shell e pela instabilidade do AVD; não houve interação manual Windows nem medição confiável de p95. |
+
+T032 permanece desmarcada até executar toda a matriz em Windows e Android e resolver/retestar o comportamento de background observado.

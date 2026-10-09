@@ -77,11 +77,15 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		PublishState();
 	}
 
-	[RelayCommand]
-	private void ClearSelected()
+	[RelayCommand(AllowConcurrentExecutions = false)]
+	private async Task ClearSelectedAsync(CancellationToken cancellationToken)
 	{
-		StatusMessage = _session.ClearSelected() ? string.Empty : "A célula selecionada não pode ser apagada neste modo.";
-		PublishState();
+		var cleared = await Task.Run(_session.ClearSelected, cancellationToken).ConfigureAwait(false);
+		await MainThread.InvokeOnMainThreadAsync(() =>
+		{
+			StatusMessage = cleared ? string.Empty : "A célula selecionada não pode ser apagada neste modo.";
+			PublishState();
+		});
 	}
 
 	[RelayCommand]
@@ -95,18 +99,26 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		});
 	}
 
-	[RelayCommand]
-	private void Undo()
+	[RelayCommand(AllowConcurrentExecutions = false)]
+	private async Task UndoAsync(CancellationToken cancellationToken)
 	{
-		StatusMessage = _session.Undo() ? string.Empty : "Não há ação para desfazer.";
-		PublishState();
+		var undone = await Task.Run(_session.Undo, cancellationToken).ConfigureAwait(false);
+		await MainThread.InvokeOnMainThreadAsync(() =>
+		{
+			StatusMessage = undone ? string.Empty : "Não há ação para desfazer.";
+			PublishState();
+		});
 	}
 
-	[RelayCommand]
-	private void Redo()
+	[RelayCommand(AllowConcurrentExecutions = false)]
+	private async Task RedoAsync(CancellationToken cancellationToken)
 	{
-		StatusMessage = _session.Redo() ? string.Empty : "Não há ação para refazer.";
-		PublishState();
+		var redone = await Task.Run(_session.Redo, cancellationToken).ConfigureAwait(false);
+		await MainThread.InvokeOnMainThreadAsync(() =>
+		{
+			StatusMessage = redone ? string.Empty : "Não há ação para refazer.";
+			PublishState();
+		});
 	}
 
 	[RelayCommand]
@@ -138,19 +150,22 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		});
 	}
 
-	[RelayCommand]
-	private void Complete()
+	[RelayCommand(AllowConcurrentExecutions = false)]
+	private async Task CompleteAsync(CancellationToken cancellationToken)
 	{
-		var result = _session.TryComplete();
-		StatusMessage = result.Status switch
+		var result = await Task.Run(_session.TryComplete, cancellationToken).ConfigureAwait(false);
+		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
-			SessionCompletionStatus.Completed => string.Empty,
-			SessionCompletionStatus.Incomplete => "Preencha todas as células antes de concluir.",
-			SessionCompletionStatus.ConflictingBoard => "Corrija os conflitos antes de concluir.",
-			SessionCompletionStatus.IncorrectSolution => "A solução não corresponde ao quebra-cabeça.",
-			_ => string.Empty
-		};
-		PublishState();
+			StatusMessage = result.Status switch
+			{
+				SessionCompletionStatus.Completed => string.Empty,
+				SessionCompletionStatus.Incomplete => "Preencha todas as células antes de concluir.",
+				SessionCompletionStatus.ConflictingBoard => "Corrija os conflitos antes de concluir.",
+				SessionCompletionStatus.IncorrectSolution => "A solução não corresponde ao quebra-cabeça.",
+				_ => string.Empty
+			};
+			PublishState();
+		});
 	}
 
 	private void OnSessionViewStateChanged(object? sender, EventArgs eventArgs) =>

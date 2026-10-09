@@ -174,3 +174,8 @@ Task T019: GameSessionCompletionTests.cs
 - NUnit tests are written before their corresponding Application implementation; no MAUI UI automation framework is introduced.
 - Do not count local-valid answers that only differ from `SolutionGrid` as errors during play.
 - Do not persist active-session state; persistence after process termination remains feature 005.
+
+## Phase 6: Convergence
+
+- [X] T031 Route remaining board-validation calls from session creation, answer clearing, Undo/Redo, and completion through asynchronous commands off the MAUI UI thread, publishing state on the UI thread per FR-011 and the plan async-validation decision (partial).
+- [ ] T032 Perform and record the pending Windows and Android manual acceptance matrix, including TalkBack/Narrator traversal, offline flows, lifecycle behavior, responsiveness, and device/OS p95 baselines per FR-001–FR-013, SC-001–SC-012, and quickstart.md (partial).
