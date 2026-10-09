@@ -36,9 +36,12 @@ public sealed class GameSessionLifecycleBehavior : IDisposable
 		_session = null;
 	}
 
-	private void OnDeactivated(object? sender, EventArgs eventArgs) => _session?.Pause();
-	private void OnStopped(object? sender, EventArgs eventArgs) => _session?.Pause();
-	private void OnResumed(object? sender, EventArgs eventArgs) { }
+	private void OnDeactivated(object? sender, EventArgs eventArgs) => _session?.PauseForBackground();
+	private void OnStopped(object? sender, EventArgs eventArgs) => _session?.PauseForBackground();
+	private void OnResumed(object? sender, EventArgs eventArgs)
+	{
+		// Returning to the foreground never resumes the active timer implicitly.
+	}
 
 	public void Dispose() => Detach(pause: true);
 }

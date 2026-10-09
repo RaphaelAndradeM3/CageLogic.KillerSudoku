@@ -54,3 +54,16 @@ Este registro contém evidências parciais; não substitui a aceitação manual 
 | Offline, TalkBack, Narrator e p95 | Não verificados. A tentativa de modo avião foi limitada pela permissão de broadcast do Android shell e pela instabilidade do AVD; não houve interação manual Windows nem medição confiável de p95. |
 
 T032 permanece desmarcada até executar toda a matriz em Windows e Android e resolver/retestar o comportamento de background observado.
+
+## Registro da implementação (2026-10-08)
+
+| Verificação | Resultado |
+|---|---|
+| Build Release da solution | Passou com 0 avisos e 0 erros, incluindo os targets Android e Windows. Para contornar o acesso negado do linker ao cache NuGet global (`XAAMP7019`), esse build usou `PublishTrimmed=false`, `RunAOTCompilation=false` e `AndroidLinkMode=None`; essas opções não foram gravadas nos projetos. |
+| Build Android Debug | Passou com 0 avisos e 0 erros. |
+| Testes NUnit | 141 aprovados, 0 falhas. Inclui os estados pendentes de dica durante substituição obsoleta e limpeza após sucesso, cancelamento e falha, além da pausa de background com `TimeProvider`. |
+| Integração de ciclo de vida | `Window.Deactivated`/`Stopped` e o callback Android `OnPause` pausam a sessão; retornar ao primeiro plano não retoma o cronômetro. A cobertura determinística passou; não foi possível executar o reteste em dispositivo. |
+| Estado de carregamento de dica | Indicador visual, descrição acessível e anúncio pelo leitor de tela implementados. A seleção e edição do tabuleiro continuam habilitadas durante o cálculo. |
+| Aceitação manual Windows/Android | Não realizada: `adb` e `emulator` não estão no PATH nem nas localizações padrão verificadas; há apenas um arquivo de perfil AVD antigo. Não houve ferramenta de interação manual Windows/TalkBack/Narrator neste ambiente. Offline, leitores de tela e p95 reais permanecem pendentes. |
+
+T033, T035, T030 e T032 permanecem desmarcadas até que o ciclo de vida e a matriz completa sejam verificados em ambientes Windows e Android interativos.

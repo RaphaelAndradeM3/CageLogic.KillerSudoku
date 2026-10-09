@@ -1,5 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.LifecycleEvents;
+
 using CageLogic.Infrastructure.Logging;
 
 using CageLogic.Application.Candidates;
@@ -38,6 +41,17 @@ public static class MauiProgram
 		builder.Services.AddTransient<SessionSummaryPage>();
 		builder.Services.AddSingleton<AppShell>();
 		builder
+			.ConfigureLifecycleEvents(events =>
+			{
+#if ANDROID
+				events.AddAndroid(android => android.OnPause(_ =>
+				{
+					var session = Microsoft.Maui.IPlatformApplication.Current?
+						.Services.GetService<GameSessionStore>()?.Current;
+					session?.PauseForBackground();
+				}));
+#endif
+			})
 			.UseMauiApp<App>()
 			.ConfigureFonts(fonts =>
 			{

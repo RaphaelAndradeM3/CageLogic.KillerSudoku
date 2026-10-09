@@ -179,3 +179,11 @@ Task T019: GameSessionCompletionTests.cs
 
 - [X] T031 Route remaining board-validation calls from session creation, answer clearing, Undo/Redo, and completion through asynchronous commands off the MAUI UI thread, publishing state on the UI thread per FR-011 and the plan async-validation decision (partial).
 - [ ] T032 Perform and record the pending Windows and Android manual acceptance matrix, including TalkBack/Narrator traversal, offline flows, lifecycle behavior, responsiveness, and device/OS p95 baselines per FR-001–FR-013, SC-001–SC-012, and quickstart.md (partial).
+
+## Phase 7: Convergence
+
+- [ ] T033 Diagnose and correct Android foreground/background lifecycle integration so leaving the foreground always pauses the session, returning never resumes it implicitly, and inactive time is excluded; add regression coverage for the window-to-session pause wiring where testable and record a stable Android retest per FR-009 and SC-006 (partial).
+- [X] T034 Expose and announce a visible pending state while a hint is being calculated, without disabling board selection or editing, and verify the loading state clears on success, cancellation, stale-result replacement, and failure per FR-011 and SC-012 (partial).
+- [ ] T035 After T033–T034, complete and record the remaining Windows and Android acceptance evidence in quickstart.md: TalkBack/Narrator traversal and operation of all 81 cells and controls, offline primary flows, responsiveness during validation/candidate calculation/generation/hints, and device/OS p95 baselines per FR-001–FR-013 and SC-001–SC-012 (partial).
+
+**Phase 7 status (2026-10-08)**: T034 is complete. T033's Android lifecycle integration and deterministic regression coverage are implemented; its stable device retest remains pending. T035 and the earlier T030/T032 manual acceptance remain unchecked because this environment has no Android SDK/ADB executables or Windows screen-reader interaction tool.

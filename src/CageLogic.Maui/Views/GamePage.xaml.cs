@@ -1,6 +1,7 @@
 using CageLogic.Maui.Controls;
 using CageLogic.Maui.Lifecycle;
 using CageLogic.Maui.ViewModels;
+using Microsoft.Maui.Accessibility;
 
 namespace CageLogic.Maui.Views;
 
@@ -41,6 +42,9 @@ public partial class GamePage : ContentPage
 
 	private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs eventArgs)
 	{
+		if (eventArgs.PropertyName == nameof(GamePageViewModel.IsHintPending) && _viewModel.IsHintPending)
+			SemanticScreenReader.Default.Announce("Calculando dica. Você ainda pode editar o tabuleiro.");
+
 		if (eventArgs.PropertyName == nameof(GamePageViewModel.ViewState))
 		{
 			BoardView.SetViewState(_viewModel.ViewState);

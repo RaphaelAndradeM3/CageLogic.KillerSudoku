@@ -26,6 +26,12 @@
             <Label Text="{Binding HintMessage}" TextColor="#334F70" FontSize="14"
                    SemanticProperties.Description="Explicação da dica" />
 
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center" IsVisible="{Binding IsHintPending}">
+                <ActivityIndicator IsRunning="{Binding IsHintPending}" IsVisible="{Binding IsHintPending}" Color="#315F9D" />
+                <Label Text="Calculando dica..." TextColor="#526174" VerticalOptions="Center"
+                       SemanticProperties.Description="Uma dica está sendo calculada; a edição do tabuleiro continua disponível." />
+            </HorizontalStackLayout>
+
             <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
                 <Button Text="{Binding ViewState.InputMode, StringFormat='Modo: {0}'}" Command="{Binding ToggleInputModeCommand}"
                         SemanticProperties.Hint="Alterna entre inserir resposta e editar candidatos" />

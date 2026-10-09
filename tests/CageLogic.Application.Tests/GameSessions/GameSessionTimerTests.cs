@@ -5,6 +5,25 @@ namespace CageLogic.Application.Tests.GameSessions;
 public sealed class GameSessionTimerTests
 {
 	[Test]
+	public void BackgroundPause_ExcludesInactiveTime_AndRequiresExplicitResume()
+	{
+		var timeProvider = new ManualTimeProvider();
+		var session = new GameSession(GameSessionTestData.CreateGeneratedPuzzle(), timeProvider: timeProvider);
+		timeProvider.Advance(TimeSpan.FromSeconds(12));
+
+		session.PauseForBackground();
+		timeProvider.Advance(TimeSpan.FromMinutes(2));
+
+		Assert.That(session.IsPaused, Is.True);
+		Assert.That(session.ActiveElapsed, Is.EqualTo(TimeSpan.FromSeconds(12)));
+
+		session.Resume();
+		timeProvider.Advance(TimeSpan.FromSeconds(8));
+		Assert.That(session.IsPaused, Is.False);
+		Assert.That(session.ActiveElapsed, Is.EqualTo(TimeSpan.FromSeconds(20)));
+	}
+
+	[Test]
 	public void PauseIsIdempotent_BackgroundTimeIsExcluded_AndResumeIsExplicit()
 	{
 		var timeProvider = new ManualTimeProvider();

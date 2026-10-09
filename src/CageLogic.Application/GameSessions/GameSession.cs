@@ -76,6 +76,7 @@ public sealed class GameSession
 	public long BoardRevision { get { lock (_sync) return _boardRevision; } }
 	public int ErrorCount { get { lock (_sync) return _errorCount; } }
 	public int DisplayedHintLevelCount { get { lock (_sync) return _displayedHintLevelCount; } }
+	public bool IsHintPending => _hintCoordinator.IsPending;
 	public bool CanUndo { get { lock (_sync) return _history.CanUndo; } }
 	public bool CanRedo { get { lock (_sync) return _history.CanRedo; } }
 	public GameInputMode InputMode { get { lock (_sync) return _inputMode; } }
@@ -258,6 +259,9 @@ public sealed class GameSession
 		_timer.Pause();
 		RaiseViewStateChanged();
 	}
+
+	/// <summary>Pauses active play when the host sends the session to the background.</summary>
+	public void PauseForBackground() => Pause();
 
 	public void Resume()
 	{

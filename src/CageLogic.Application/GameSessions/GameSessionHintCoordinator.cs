@@ -35,6 +35,7 @@ public sealed class GameSessionHintCoordinator
 
 	public HintResult? CurrentHint { get { lock (_sync) return _currentHint; } }
 	public int DisplayedHintLevelCount { get { lock (_sync) return _displayedHintLevelCount; } }
+	public bool IsPending { get { lock (_sync) return _currentTask is { IsCompleted: false }; } }
 
 	public Task<HintResult?> RequestNextHintAsync(CancellationToken cancellationToken = default)
 	{
@@ -98,7 +99,12 @@ public sealed class GameSessionHintCoordinator
 		cancellation?.Dispose();
 		StateChanged?.Invoke(this, changed);
 		if (restart)
+		{
 			_ = RequestNextHintAsync();
+			lock (_sync)
+				changed = CreateStateChangedArgs();
+			StateChanged?.Invoke(this, changed);
+		}
 	}
 
 	private async Task ExecuteAsync(

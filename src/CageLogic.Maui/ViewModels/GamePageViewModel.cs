@@ -3,6 +3,7 @@ using CageLogic.Application.Hints;
 using CageLogic.Domain.Board;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Dispatching;
 
@@ -11,6 +12,7 @@ namespace CageLogic.Maui.ViewModels;
 public partial class GamePageViewModel : ObservableObject, IDisposable
 {
 	private readonly GameSession _session;
+	private readonly ILogger<GamePageViewModel> _logger;
 	private readonly IDispatcherTimer? _elapsedTimer;
 	private long _lastBoardRevision;
 	private bool _disposed;
@@ -24,11 +26,17 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[ObservableProperty]
 	public partial string HintMessage { get; set; } = string.Empty;
 
-	public GamePageViewModel(GameSessionStore sessionStore)
+	[ObservableProperty]
+	public partial bool IsHintPending { get; set; }
+
+	public GamePageViewModel(GameSessionStore sessionStore, ILogger<GamePageViewModel> logger)
 	{
 		ArgumentNullException.ThrowIfNull(sessionStore);
+		ArgumentNullException.ThrowIfNull(logger);
+		_logger = logger;
 		_session = sessionStore.Current ?? throw new InvalidOperationException("A game session must be created before navigating to the board.");
 		ViewState = _session.ViewState;
+		IsHintPending = _session.IsHintPending;
 		_session.ViewStateChanged += OnSessionViewStateChanged;
 		_elapsedTimer = Microsoft.Maui.Controls.Application.Current?.Dispatcher.CreateTimer();
 		if (_elapsedTimer is not null)
@@ -134,20 +142,57 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[RelayCommand]
 	private async Task RequestHintAsync(CancellationToken cancellationToken)
 	{
-		var hint = await _session.RequestNextHintAsync(cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
-			HintMessage = hint?.Status switch
-			{
-				HintStatus.Available => hint.Explanation ?? string.Empty,
-				HintStatus.NoSafeHint => "Não há uma dica segura para esta posição.",
-				HintStatus.InconsistentState => "Corrija os conflitos para pedir uma dica.",
-				HintStatus.PuzzleSolved => "O tabuleiro já está resolvido.",
-				HintStatus.ValueNotConfirmed => "Não foi possível confirmar esta ação.",
-				_ => "A solicitação de dica foi cancelada."
-			};
-			PublishState();
+			StatusMessage = string.Empty;
+			HintMessage = string.Empty;
+			IsHintPending = true;
 		});
+
+		try
+		{
+			var hint = await _session.RequestNextHintAsync(cancellationToken).ConfigureAwait(false);
+			await MainThread.InvokeOnMainThreadAsync(() =>
+			{
+				if (hint is null && _session.IsHintPending)
+					HintMessage = string.Empty;
+				else
+				{
+					HintMessage = hint?.Status switch
+					{
+						HintStatus.Available => hint.Explanation ?? string.Empty,
+						HintStatus.NoSafeHint => "Não há uma dica segura para esta posição.",
+						HintStatus.InconsistentState => "Corrija os conflitos para pedir uma dica.",
+						HintStatus.PuzzleSolved => "O tabuleiro já está resolvido.",
+						HintStatus.ValueNotConfirmed => "Não foi possível confirmar esta ação.",
+						_ => "A solicitação de dica foi cancelada."
+					};
+				}
+				PublishState();
+			});
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			await MainThread.InvokeOnMainThreadAsync(() =>
+				HintMessage = _session.IsHintPending ? string.Empty : "A solicitação de dica foi cancelada.");
+		}
+		catch (Exception exception)
+		{
+			_logger.LogError(exception, "Hint calculation failed for the active game session");
+			await MainThread.InvokeOnMainThreadAsync(() =>
+			{
+				HintMessage = string.Empty;
+				StatusMessage = "Não foi possível calcular a dica. Tente novamente.";
+			});
+		}
+		finally
+		{
+			await MainThread.InvokeOnMainThreadAsync(() =>
+			{
+				IsHintPending = _session.IsHintPending;
+				PublishState();
+			});
+		}
 	}
 
 	[RelayCommand(AllowConcurrentExecutions = false)]
@@ -169,7 +214,11 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	}
 
 	private void OnSessionViewStateChanged(object? sender, EventArgs eventArgs) =>
-		MainThread.BeginInvokeOnMainThread(PublishState);
+		MainThread.BeginInvokeOnMainThread(() =>
+		{
+			IsHintPending = _session.IsHintPending;
+			PublishState();
+		});
 
 	private void OnElapsedTimerTick(object? sender, EventArgs eventArgs)
 	{
@@ -180,6 +229,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	private void PublishState()
 	{
 		var nextState = _session.ViewState;
+		IsHintPending = _session.IsHintPending;
 		if (nextState.BoardRevision != _lastBoardRevision)
 		{
 			_lastBoardRevision = nextState.BoardRevision;
