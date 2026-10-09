@@ -187,3 +187,10 @@ Task T019: GameSessionCompletionTests.cs
 - [ ] T035 After T033–T034, complete and record the remaining Windows and Android acceptance evidence in quickstart.md: TalkBack/Narrator traversal and operation of all 81 cells and controls, offline primary flows, responsiveness during validation/candidate calculation/generation/hints, and device/OS p95 baselines per FR-001–FR-013 and SC-001–SC-012 (partial).
 
 **Phase 7 status (2026-10-08)**: T034 is complete. T033's Android lifecycle integration and deterministic regression coverage are implemented; its stable device retest remains pending. T035 and the earlier T030/T032 manual acceptance remain unchecked because this environment has no Android SDK/ADB executables or Windows screen-reader interaction tool.
+
+## Phase 8: Convergence
+
+- [X] T036 Preserve and serialize answer/clear input intents while validation runs off the UI thread: capture the selected cell and input mode at dispatch, prevent valid consecutive edits from targeting a later selection or being silently discarded, and add deterministic concurrency regression coverage in `src/CageLogic.Maui/ViewModels/GamePageViewModel.cs`, `src/CageLogic.Application/GameSessions/GameSession.cs`, and the corresponding tests (FR-003, FR-011, SC-004; partial).
+- [ ] T037 After T036, complete and record the remaining Windows and Android acceptance matrix in `specs/004-game-session/quickstart.md`, including TalkBack/Narrator operation of all 81 cells and controls, offline flows, lifecycle pause/resume, responsiveness during validation/candidate calculation/generation/hints, and device/OS p95 baselines (T030, T032, T033, T035; SC-001–SC-012; partial).
+
+**Phase 8 status (2026-10-08)**: T036 is complete and its deterministic queued-edit test passed. T037 and the related T030/T032/T033/T035 manual acceptance remain open: this environment has neither ADB/emulator executables nor an interactive Windows/accessibility tool, so the required real-device and screen-reader evidence cannot be captured here.

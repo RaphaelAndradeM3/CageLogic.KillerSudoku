@@ -67,3 +67,11 @@ T032 permanece desmarcada até executar toda a matriz em Windows e Android e res
 | Aceitação manual Windows/Android | Não realizada: `adb` e `emulator` não estão no PATH nem nas localizações padrão verificadas; há apenas um arquivo de perfil AVD antigo. Não houve ferramenta de interação manual Windows/TalkBack/Narrator neste ambiente. Offline, leitores de tela e p95 reais permanecem pendentes. |
 
 T033, T035, T030 e T032 permanecem desmarcadas até que o ciclo de vida e a matriz completa sejam verificados em ambientes Windows e Android interativos.
+
+## Registro da implementação da Fase 8 (2026-10-08)
+
+| Verificação | Resultado |
+|---|---|
+| Build Release da solution | Passou com 0 avisos e 0 erros, incluindo Android e Windows. Foram usados somente nesta execução `PublishTrimmed=false`, `RunAOTCompilation=false` e `AndroidLinkMode=None` para contornar o acesso negado do linker ao cache NuGet. |
+| Testes NUnit | 142 aprovados, 0 falhas. O novo teste de fila bloqueia uma mutação, despacha uma remoção para outra célula e confirma que ambas são aplicadas ao destino e modo capturados. |
+| Interação manual Windows/Android | Não disponível nesta execução: `adb`/`emulator` não existem no PATH nem nos diretórios padrão verificados; também não há ferramenta interativa de Windows/TalkBack/Narrator. T037 e as tarefas de aceitação relacionadas permanecem abertas. |

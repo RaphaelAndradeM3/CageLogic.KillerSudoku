@@ -108,11 +108,6 @@ public sealed class GameSession
 	/// <summary>Enters a note in Candidate mode, or validates and records an answer in Answer mode.</summary>
 	public bool EnterDigit(int digit)
 	{
-		if (digit is < 1 or > 9)
-			return false;
-
-		SudokuBoard beforeBoard;
-		CandidateNotes beforeNotes;
 		CellPosition position;
 		GameInputMode mode;
 		lock (_sync)
@@ -121,6 +116,25 @@ public sealed class GameSession
 				return false;
 			position = _selectedPosition.Value;
 			mode = _inputMode;
+		}
+
+		return EnterDigit(position, mode, digit);
+	}
+
+	/// <summary>Applies a digit to the cell and mode captured when the player dispatched the intent.</summary>
+	public bool EnterDigit(CellPosition position, GameInputMode mode, int digit)
+	{
+		if (digit is < 1 or > 9)
+			return false;
+		if (!Enum.IsDefined(mode))
+			throw new ArgumentOutOfRangeException(nameof(mode));
+
+		SudokuBoard beforeBoard;
+		CandidateNotes beforeNotes;
+		lock (_sync)
+		{
+			if (_summary is not null)
+				return false;
 			beforeBoard = _board;
 			beforeNotes = _notes;
 			var cell = beforeBoard.GetCell(position);
@@ -174,8 +188,6 @@ public sealed class GameSession
 
 	public bool ClearSelected()
 	{
-		SudokuBoard beforeBoard;
-		CandidateNotes beforeNotes;
 		CellPosition position;
 		GameInputMode mode;
 		lock (_sync)
@@ -184,6 +196,23 @@ public sealed class GameSession
 				return false;
 			position = _selectedPosition.Value;
 			mode = _inputMode;
+		}
+
+		return ClearSelected(position, mode);
+	}
+
+	/// <summary>Clears the cell and mode captured when the player dispatched the intent.</summary>
+	public bool ClearSelected(CellPosition position, GameInputMode mode)
+	{
+		if (!Enum.IsDefined(mode))
+			throw new ArgumentOutOfRangeException(nameof(mode));
+
+		SudokuBoard beforeBoard;
+		CandidateNotes beforeNotes;
+		lock (_sync)
+		{
+			if (_summary is not null)
+				return false;
 			beforeBoard = _board;
 			beforeNotes = _notes;
 			if (beforeBoard.GetCell(position).GivenValue.HasValue)

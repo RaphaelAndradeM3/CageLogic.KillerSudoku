@@ -12,6 +12,7 @@ namespace CageLogic.Maui.ViewModels;
 public partial class GamePageViewModel : ObservableObject, IDisposable
 {
 	private readonly GameSession _session;
+	private readonly GameSessionCommandQueue _commandQueue;
 	private readonly ILogger<GamePageViewModel> _logger;
 	private readonly IDispatcherTimer? _elapsedTimer;
 	private long _lastBoardRevision;
@@ -29,10 +30,12 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[ObservableProperty]
 	public partial bool IsHintPending { get; set; }
 
-	public GamePageViewModel(GameSessionStore sessionStore, ILogger<GamePageViewModel> logger)
+	public GamePageViewModel(GameSessionStore sessionStore, GameSessionCommandQueue commandQueue, ILogger<GamePageViewModel> logger)
 	{
 		ArgumentNullException.ThrowIfNull(sessionStore);
+		ArgumentNullException.ThrowIfNull(commandQueue);
 		ArgumentNullException.ThrowIfNull(logger);
+		_commandQueue = commandQueue;
 		_logger = logger;
 		_session = sessionStore.Current ?? throw new InvalidOperationException("A game session must be created before navigating to the board.");
 		ViewState = _session.ViewState;
@@ -57,12 +60,20 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		PublishState();
 	}
 
-	public async Task EnterDigitAsync(int digit)
+	public async Task EnterDigitAsync(int digit, CancellationToken cancellationToken = default)
 	{
-		var applied = await Task.Run(() => _session.EnterDigit(digit)).ConfigureAwait(false);
+		var intent = ViewState;
+		if (intent.SelectedPosition is not { } position)
+		{
+			await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "Selecione uma célula antes de informar um dígito.");
+			return;
+		}
+
+		var applied = await _commandQueue.ExecuteAsync(
+			() => _session.EnterDigit(position, intent.InputMode, digit), cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
-			StatusMessage = applied ? string.Empty : "Selecione uma célula editável e vazia no modo de candidatos.";
+			StatusMessage = applied ? string.Empty : "A célula selecionada não aceita essa alteração.";
 			PublishState();
 		});
 	}
@@ -88,7 +99,9 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[RelayCommand(AllowConcurrentExecutions = false)]
 	private async Task ClearSelectedAsync(CancellationToken cancellationToken)
 	{
-		var cleared = await Task.Run(_session.ClearSelected, cancellationToken).ConfigureAwait(false);
+		var intent = ViewState;
+		var cleared = intent.SelectedPosition is { } position && await _commandQueue.ExecuteAsync(
+			() => _session.ClearSelected(position, intent.InputMode), cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
 			StatusMessage = cleared ? string.Empty : "A célula selecionada não pode ser apagada neste modo.";
@@ -99,7 +112,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[RelayCommand]
 	private async Task AutoFillCandidatesAsync(CancellationToken cancellationToken)
 	{
-		var changed = await Task.Run(_session.AutoFillCandidates, cancellationToken).ConfigureAwait(false);
+		var changed = await _commandQueue.ExecuteAsync(_session.AutoFillCandidates, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
 			StatusMessage = changed ? "Candidatos preenchidos para as células vazias." : "Os candidatos já estavam atualizados.";
@@ -110,7 +123,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[RelayCommand(AllowConcurrentExecutions = false)]
 	private async Task UndoAsync(CancellationToken cancellationToken)
 	{
-		var undone = await Task.Run(_session.Undo, cancellationToken).ConfigureAwait(false);
+		var undone = await _commandQueue.ExecuteAsync(_session.Undo, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
 			StatusMessage = undone ? string.Empty : "Não há ação para desfazer.";
@@ -121,7 +134,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[RelayCommand(AllowConcurrentExecutions = false)]
 	private async Task RedoAsync(CancellationToken cancellationToken)
 	{
-		var redone = await Task.Run(_session.Redo, cancellationToken).ConfigureAwait(false);
+		var redone = await _commandQueue.ExecuteAsync(_session.Redo, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
 			StatusMessage = redone ? string.Empty : "Não há ação para refazer.";
@@ -198,7 +211,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[RelayCommand(AllowConcurrentExecutions = false)]
 	private async Task CompleteAsync(CancellationToken cancellationToken)
 	{
-		var result = await Task.Run(_session.TryComplete, cancellationToken).ConfigureAwait(false);
+		var result = await _commandQueue.ExecuteAsync(_session.TryComplete, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
 			StatusMessage = result.Status switch

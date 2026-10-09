@@ -7,6 +7,7 @@ using CageLogic.Infrastructure.Logging;
 
 using CageLogic.Application.Candidates;
 using CageLogic.Application.Generation;
+using CageLogic.Application.GameSessions;
 using CageLogic.Application.Hints;
 using CageLogic.Application.Moves;
 using CageLogic.Application.Validation;
@@ -34,6 +35,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<GetCandidatesUseCase>();
 		builder.Services.AddSingleton<ValidateBoardUseCase>();
 		builder.Services.AddSingleton<GameSessionStore>();
+		builder.Services.AddTransient<GameSessionCommandQueue>();
 		builder.Services.AddSingleton<HomeViewModel>();
 		builder.Services.AddSingleton<HomePage>();
 		builder.Services.AddTransient<GamePageViewModel>();
