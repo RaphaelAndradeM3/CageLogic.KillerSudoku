@@ -47,23 +47,23 @@ public sealed class GetHintUseCase
         var boardValidation = _boardValidator.Validate(board);
         if (!boardValidation.IsValid || context.Multiplicity == SolutionMultiplicity.NoSolution)
         {
-            return Terminal(revision, HintStatus.InconsistentState);
+            return Terminal(revision, HintStatus.InconsistentState, request.Level);
         }
 
         if (context.Multiplicity == SolutionMultiplicity.Unique && !MatchesUniqueSolution(board, context.UniqueSolution!))
         {
-            return Terminal(revision, HintStatus.InconsistentState);
+            return Terminal(revision, HintStatus.InconsistentState, request.Level);
         }
 
         if (boardValidation.IsSolved)
         {
-            return Terminal(revision, HintStatus.PuzzleSolved);
+            return Terminal(revision, HintStatus.PuzzleSolved, request.Level);
         }
 
         if (context.Multiplicity == SolutionMultiplicity.Multiple &&
             !HasCompatibleSolution(context.Puzzle, board, cancellationToken))
         {
-            return Terminal(revision, HintStatus.InconsistentState);
+            return Terminal(revision, HintStatus.InconsistentState, request.Level);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -71,7 +71,7 @@ public sealed class GetHintUseCase
         var step = _analyzer.FindNextStep(state, cancellationToken: cancellationToken);
         if (step is null)
         {
-            return Terminal(revision, HintStatus.NoSafeHint);
+            return Terminal(revision, HintStatus.NoSafeHint, request.Level);
         }
 
         if (step.Evidence is null)
@@ -86,19 +86,19 @@ public sealed class GetHintUseCase
             {
                 if (context.Multiplicity != SolutionMultiplicity.Unique)
                 {
-                    return Terminal(revision, HintStatus.ValueNotConfirmed);
+                    return Terminal(revision, HintStatus.ValueNotConfirmed, request.Level);
                 }
 
                 if (context.UniqueSolution!.GetValue(placement.Position) != placement.Value)
                 {
-                    return Terminal(revision, HintStatus.InconsistentState);
+                    return Terminal(revision, HintStatus.InconsistentState, request.Level);
                 }
             }
             else if (context.Multiplicity == SolutionMultiplicity.Unique &&
                      step.Eliminations.Any(elimination =>
                          context.UniqueSolution!.GetValue(elimination.Position) == elimination.Value))
             {
-                return Terminal(revision, HintStatus.InconsistentState);
+                return Terminal(revision, HintStatus.InconsistentState, request.Level);
             }
         }
 
@@ -132,7 +132,8 @@ public sealed class GetHintUseCase
             action,
             relevantDigits,
             patternCandidates,
-            scopeContext);
+            scopeContext,
+            request.Level);
     }
 
     private bool HasCompatibleSolution(
@@ -198,5 +199,5 @@ public sealed class GetHintUseCase
         return highlights;
     }
 
-    private static HintResult Terminal(long revision, HintStatus status) => new(revision, status);
+    private static HintResult Terminal(long revision, HintStatus status, HintLevel level) => new(revision, status, level: level);
 }

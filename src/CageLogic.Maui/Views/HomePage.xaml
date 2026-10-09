@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CageLogic.Maui.Views.HomePage"
+             Title="Killer Sudoku"
+             BackgroundColor="#F5F6F8">
+    <ScrollView>
+        <VerticalStackLayout Padding="28,36" Spacing="20" MaximumWidthRequest="620" HorizontalOptions="Center" VerticalOptions="Center">
+            <Label Text="Killer Sudoku" FontSize="34" FontAttributes="Bold" TextColor="#14243A"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Resolva o tabuleiro respeitando as linhas, colunas, blocos e somas das cages."
+                   FontSize="16" TextColor="#526174" />
+            <Border Padding="18" BackgroundColor="White" Stroke="#DEE4EC" StrokeShape="RoundRectangle 16">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="Dificuldade" FontSize="15" FontAttributes="Bold" TextColor="#25354A" />
+                    <Picker Title="Escolha a dificuldade"
+                            ItemsSource="{Binding Difficulties}"
+                            SelectedItem="{Binding SelectedDifficulty}"
+                            SemanticProperties.Description="Dificuldade do novo puzzle" />
+                    <Button Text="Iniciar partida" Command="{Binding GeneratePuzzleCommand}"
+                            IsEnabled="{Binding CanStartGeneration}"
+                            SemanticProperties.Hint="Gera um puzzle da dificuldade escolhida" />
+                    <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
+                        <ActivityIndicator IsRunning="{Binding IsGenerating}" IsVisible="{Binding IsGenerating}" Color="#315F9D" />
+                        <Label Text="{Binding StatusMessage}" TextColor="#526174" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Button Text="Cancelar geração" Command="{Binding CancelGenerationCommand}"
+                            IsVisible="{Binding IsGenerating}" BackgroundColor="#E8EDF4" TextColor="#25354A"
+                            SemanticProperties.Hint="Cancela o cálculo e permite tentar novamente" />
+                    <Button Text="Tentar novamente" Command="{Binding GeneratePuzzleCommand}"
+                            IsVisible="{Binding HasRetryableFailure}" BackgroundColor="#E8EDF4" TextColor="#25354A" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

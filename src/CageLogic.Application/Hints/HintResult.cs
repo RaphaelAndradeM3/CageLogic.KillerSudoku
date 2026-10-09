@@ -15,13 +15,15 @@ public sealed class HintResult
         string? explanation = null,
         IReadOnlyDictionary<HintHighlightRole, IReadOnlyList<CellPosition>>? highlights = null,
         IEnumerable<HintCandidateReference>? involvedCandidates = null,
-        HintAction? action = null,
-        IEnumerable<int>? relevantDigits = null,
-        IEnumerable<HintCandidateReference>? patternCandidates = null,
-        LogicalScopeContext? scopeContext = null)
+		HintAction? action = null,
+		IEnumerable<int>? relevantDigits = null,
+		IEnumerable<HintCandidateReference>? patternCandidates = null,
+		LogicalScopeContext? scopeContext = null,
+		HintLevel? level = null)
     {
-        BoardRevision = boardRevision;
-        Status = status;
+		BoardRevision = boardRevision;
+		Status = status;
+		Level = level;
         TechniqueId = techniqueId;
         TechniqueName = techniqueName;
         Explanation = explanation;
@@ -49,7 +51,10 @@ public sealed class HintResult
 
     public long BoardRevision { get; }
 
-    public HintStatus Status { get; }
+	public HintStatus Status { get; }
+
+	/// <summary>The progressive disclosure level that produced this result, when a level was requested.</summary>
+	public HintLevel? Level { get; }
 
     public LogicalTechniqueId? TechniqueId { get; }
 

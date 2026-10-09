@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:controls="clr-namespace:CageLogic.Maui.Controls"
+             x:Class="CageLogic.Maui.Views.GamePage"
+             Title="Partida"
+             BackgroundColor="#F5F6F8">
+    <ScrollView>
+        <VerticalStackLayout Padding="12,10,12,20" Spacing="10" MaximumWidthRequest="620" HorizontalOptions="Center">
+            <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Killer Sudoku" FontSize="22" FontAttributes="Bold" TextColor="#14243A"
+                           SemanticProperties.HeadingLevel="Level1" />
+                    <Label Text="{Binding DifficultyLabel, StringFormat='Dificuldade: {0}'}" FontSize="13" TextColor="#526174" />
+                    <Label Text="{Binding ViewState.ActiveElapsed, StringFormat='Tempo ativo: {0:hh\\:mm\\:ss}'}" FontSize="13" TextColor="#526174" />
+                </VerticalStackLayout>
+                <Button Grid.Column="1" Text="Voltar" Clicked="OnBackClicked" BackgroundColor="#E8EDF4" TextColor="#25354A"
+                        SemanticProperties.Hint="Volta à seleção de dificuldade" />
+            </Grid>
+
+            <controls:KillerSudokuBoardView x:Name="BoardView" AutomationId="KillerSudokuBoard"
+                                             MaximumWidthRequest="560" HorizontalOptions="Center" />
+
+            <Label Text="{Binding StatusMessage}" TextColor="#9A3D35" FontSize="13"
+                   SemanticProperties.Description="Estado da entrada" />
+            <Label Text="{Binding HintMessage}" TextColor="#334F70" FontSize="14"
+                   SemanticProperties.Description="Explicação da dica" />
+
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center" IsVisible="{Binding IsHintPending}">
+                <ActivityIndicator IsRunning="{Binding IsHintPending}" IsVisible="{Binding IsHintPending}" Color="#315F9D" />
+                <Label Text="Calculando dica..." TextColor="#526174" VerticalOptions="Center"
+                       SemanticProperties.Description="Uma dica está sendo calculada; a edição do tabuleiro continua disponível." />
+            </HorizontalStackLayout>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                <Button Text="{Binding ViewState.InputMode, StringFormat='Modo: {0}'}" Command="{Binding ToggleInputModeCommand}"
+                        SemanticProperties.Hint="Alterna entre inserir resposta e editar candidatos" />
+                <Button Grid.Column="1" Text="Preencher candidatos" Command="{Binding AutoFillCandidatesCommand}"
+                        SemanticProperties.Hint="Substitui as notas de todas as células vazias pelos candidatos atuais" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="6">
+                <Button Text="Desfazer" Command="{Binding UndoCommand}" IsEnabled="{Binding ViewState.CanUndo}" />
+                <Button Grid.Column="1" Text="Refazer" Command="{Binding RedoCommand}" IsEnabled="{Binding ViewState.CanRedo}" />
+                <Button Grid.Column="2" Text="{Binding PauseButtonText}" Command="{Binding TogglePauseCommand}"
+                        SemanticProperties.Hint="Pausar ou retomar explicitamente o cronômetro ativo" />
+                <Button Grid.Column="3" Text="Pedir dica" Command="{Binding RequestHintCommand}"
+                        SemanticProperties.Hint="Mostra o próximo nível de explicação lógica" />
+            </Grid>
+
+            <Label Text="Digite um número" FontSize="15" FontAttributes="Bold" TextColor="#25354A"
+                   SemanticProperties.HeadingLevel="Level2" />
+            <Grid RowDefinitions="*,*,*" ColumnDefinitions="*,*,*" RowSpacing="6" ColumnSpacing="6">
+                <Button Text="1" Clicked="OnDigitClicked" AutomationId="Digit1" />
+                <Button Grid.Column="1" Text="2" Clicked="OnDigitClicked" AutomationId="Digit2" />
+                <Button Grid.Column="2" Text="3" Clicked="OnDigitClicked" AutomationId="Digit3" />
+                <Button Grid.Row="1" Text="4" Clicked="OnDigitClicked" AutomationId="Digit4" />
+                <Button Grid.Row="1" Grid.Column="1" Text="5" Clicked="OnDigitClicked" AutomationId="Digit5" />
+                <Button Grid.Row="1" Grid.Column="2" Text="6" Clicked="OnDigitClicked" AutomationId="Digit6" />
+                <Button Grid.Row="2" Text="7" Clicked="OnDigitClicked" AutomationId="Digit7" />
+                <Button Grid.Row="2" Grid.Column="1" Text="8" Clicked="OnDigitClicked" AutomationId="Digit8" />
+                <Button Grid.Row="2" Grid.Column="2" Text="9" Clicked="OnDigitClicked" AutomationId="Digit9" />
+            </Grid>
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                <Button Text="Apagar célula selecionada" Command="{Binding ClearSelectedCommand}"
+                        BackgroundColor="#E8EDF4" TextColor="#25354A"
+                        SemanticProperties.Hint="Apaga a resposta ou as notas da célula selecionada" />
+                <Button Grid.Column="1" Text="Concluir partida" Command="{Binding CompleteCommand}"
+                        BackgroundColor="#DDEBDD" TextColor="#1D542A"
+                        SemanticProperties.Hint="Valida e conclui a partida quando a solução estiver correta" />
+            </Grid>
+            <Label Text="Use as setas para mover a seleção. Ctrl+Z desfaz e Ctrl+Y refaz. Conflitos e destaques de dica também são descritos para leitores de tela."
+                   FontSize="12" TextColor="#526174" SemanticProperties.Description="Instruções de teclado e acessibilidade" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
