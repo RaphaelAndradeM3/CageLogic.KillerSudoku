@@ -21,7 +21,7 @@
             </Grid>
 
             <controls:KillerSudokuBoardView x:Name="BoardView" AutomationId="KillerSudokuBoard"
-                                             MaximumWidthRequest="560" HorizontalOptions="Center" />
+                                             MaximumWidthRequest="560" HorizontalOptions="Fill" />
 
             <Label Text="{Binding StatusMessage}" TextColor="{AppThemeBinding Light=#9A3D35, Dark=#FF9D92}" FontSize="13"
                    SemanticProperties.Description="Estado da entrada" />
