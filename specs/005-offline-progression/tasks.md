@@ -91,8 +91,8 @@ description: "Tarefas de implementação da feature Persistência Offline e Prog
 
 **Purpose**: validar segurança operacional, os gates automatizados e a aceitação nas duas plataformas.
 
-- [ ] T026 Revisar logs de operações de progresso para incluir contexto/correlation ID sem registrar SnapshotJson, solução, tabuleiro, notas ou valores digitados; manter a configuração Serilog diária e a retenção de 14 dias em `src/CageLogic.Maui/ViewModels/HomeViewModel.cs`, `src/CageLogic.Maui/ViewModels/GamePageViewModel.cs` e `src/CageLogic.Maui/MauiProgram.cs`.
-- [ ] T027 Executar build Release com warnaserror, suíte NUnit após build, e builds MAUI Windows/Android conforme os comandos em `specs/005-offline-progression/quickstart.md`; corrigir falhas nos arquivos afetados.
+- [X] T026 Revisar logs de operações de progresso para incluir contexto/correlation ID sem registrar SnapshotJson, solução, tabuleiro, notas ou valores digitados; manter a configuração Serilog diária e a retenção de 14 dias em `src/CageLogic.Maui/ViewModels/HomeViewModel.cs`, `src/CageLogic.Maui/ViewModels/GamePageViewModel.cs` e `src/CageLogic.Maui/MauiProgram.cs`.
+- [X] T027 Executar build Release com warnaserror, suíte NUnit após build, e builds MAUI Windows/Android conforme os comandos em `specs/005-offline-progression/quickstart.md`; corrigir falhas nos arquivos afetados.
 - [ ] T028 Realizar aceitação manual offline em Windows e Android para encerramento/retomada, conclusão, abandono, estado sem partida retomável, tema aplicado após reinício, recuperação de falha e acessibilidade dos novos controles/status com Narrator e TalkBack conforme `specs/004-game-session/spec.md` FR-012; antes de medir p95, definir e registrar por alvo o hardware e o perfil de armazenamento/banco, executar aquecimento, medir as amostras escolhidas, corrigir gargalos se exceder 250 ms e registrar condições, quantidade de amostras e resultados em `specs/005-offline-progression/acceptance.md`.
 
 ---

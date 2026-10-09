@@ -237,11 +237,16 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		}
 		catch (Exception exception)
 		{
-			_logger.LogError(exception, "Hint calculation failed for the active game session");
+			var correlationId = Guid.NewGuid().ToString("N");
+			_logger.LogError(
+				exception,
+				"Hint calculation failed for game session {SessionId} (CorrelationId {CorrelationId})",
+				_progressQueue.ActiveRecord.SessionId,
+				correlationId);
 			await MainThread.InvokeOnMainThreadAsync(() =>
 			{
 				HintMessage = string.Empty;
-				StatusMessage = "Não foi possível calcular a dica. Tente novamente.";
+				StatusMessage = $"Não foi possível calcular a dica. Tente novamente. Código: {correlationId}";
 			});
 		}
 		finally
@@ -452,7 +457,11 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	{
 		ArgumentNullException.ThrowIfNull(exception);
 		var correlationId = Guid.NewGuid().ToString("N");
-		_logger.LogError(exception, "Recoverable game action failed (CorrelationId {CorrelationId})", correlationId);
+		_logger.LogError(
+			exception,
+			"Recoverable game action failed for game session {SessionId} (CorrelationId {CorrelationId})",
+			_progressQueue.ActiveRecord.SessionId,
+			correlationId);
 		MainThread.BeginInvokeOnMainThread(() =>
 			StatusMessage = $"Ocorreu um erro inesperado. Tente novamente. Código: {correlationId}");
 	}

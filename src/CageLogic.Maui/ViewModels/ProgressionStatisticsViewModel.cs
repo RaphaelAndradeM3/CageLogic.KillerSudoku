@@ -50,8 +50,10 @@ public partial class ProgressionStatisticsViewModel : ObservableObject
 		}
 		catch (Exception exception)
 		{
-			_logger.LogError(exception, "Loading progression statistics failed");
-			await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "Não foi possível carregar as estatísticas. Tente novamente.");
+			var correlationId = Guid.NewGuid().ToString("N");
+			_logger.LogError(exception, "Loading progression statistics failed (CorrelationId {CorrelationId})", correlationId);
+			await MainThread.InvokeOnMainThreadAsync(() =>
+				StatusMessage = $"Não foi possível carregar as estatísticas. Tente novamente. Código: {correlationId}");
 		}
 		finally
 		{

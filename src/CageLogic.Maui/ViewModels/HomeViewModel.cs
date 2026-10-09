@@ -123,12 +123,13 @@ public partial class HomeViewModel : ObservableObject
 		}
 		catch (Exception exception)
 		{
-			_logger.LogError(exception, "Loading the active game progress failed");
+			var correlationId = Guid.NewGuid().ToString("N");
+			_logger.LogError(exception, "Loading the active game progress failed (CorrelationId {CorrelationId})", correlationId);
 			await MainThread.InvokeOnMainThreadAsync(() =>
 			{
 				HasActiveGame = false;
 				RecoveryRequired = true;
-				StatusMessage = "Não foi possível verificar a partida salva. Tente novamente antes de iniciar outra.";
+				StatusMessage = $"Não foi possível verificar a partida salva. Tente novamente antes de iniciar outra. Código: {correlationId}";
 			});
 		}
 		finally
