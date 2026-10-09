@@ -32,6 +32,7 @@ public sealed class GameSession
 	private int _errorCount;
 	private int _displayedHintLevelCount;
 	private HintResult? _hint;
+	private bool _hintAnalysisFailed;
 	private SessionSummary? _summary;
 
 	public GameSession(
@@ -77,6 +78,7 @@ public sealed class GameSession
 	public int ErrorCount { get { lock (_sync) return _errorCount; } }
 	public int DisplayedHintLevelCount { get { lock (_sync) return _displayedHintLevelCount; } }
 	public bool IsHintPending => _hintCoordinator.IsPending;
+	public bool HintAnalysisFailed { get { lock (_sync) return _hintAnalysisFailed; } }
 	public bool CanUndo { get { lock (_sync) return _history.CanUndo; } }
 	public bool CanRedo { get { lock (_sync) return _history.CanRedo; } }
 	public GameInputMode InputMode { get { lock (_sync) return _inputMode; } }
@@ -289,6 +291,13 @@ public sealed class GameSession
 		RaiseViewStateChanged();
 	}
 
+	/// <summary>Starts the active clock once the game page is ready for play.</summary>
+	public void Start()
+	{
+		if (_timer.Start())
+			RaiseViewStateChanged();
+	}
+
 	/// <summary>Pauses active play when the host sends the session to the background.</summary>
 	public void PauseForBackground() => Pause();
 
@@ -333,6 +342,7 @@ public sealed class GameSession
 
 	private bool RestoreHistory(bool undo)
 	{
+		bool valuesChanged;
 		lock (_sync)
 		{
 			if (_summary is not null)
@@ -340,18 +350,19 @@ public sealed class GameSession
 			var snapshot = undo ? _history.Undo() : _history.Redo();
 			if (snapshot is null)
 				return false;
-			var valuesChanged = !SessionHistory.BoardsHaveSameValues(_board, snapshot.Board);
+			valuesChanged = !SessionHistory.BoardsHaveSameValues(_board, snapshot.Board);
 			_board = snapshot.Board;
 			_notes = snapshot.Notes;
 			UpdateValidation(_validateBoard.Execute(_board));
 			if (valuesChanged)
 				_boardRevision++;
-			if (!valuesChanged)
-			{
-				RaiseViewStateChanged();
-				return true;
-			}
 		}
+		if (!valuesChanged)
+		{
+			RaiseViewStateChanged();
+			return true;
+		}
+
 		OnBoardValuesChanged();
 		return true;
 	}
@@ -372,8 +383,11 @@ public sealed class GameSession
 	{
 		lock (_sync)
 		{
+			if (eventArgs.BoardRevision != _boardRevision)
+				return;
 			_hint = eventArgs.Hint;
 			_displayedHintLevelCount = eventArgs.DisplayedHintLevelCount;
+			_hintAnalysisFailed = eventArgs.AnalysisFailed;
 		}
 		RaiseViewStateChanged();
 	}

@@ -62,25 +62,33 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 
 	public async Task EnterDigitAsync(int digit, CancellationToken cancellationToken = default)
 	{
-		var intent = ViewState;
-		if (intent.SelectedPosition is not { } position)
+		await ExecuteRecoverablyAsync(async () =>
 		{
-			await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "Selecione uma célula antes de informar um dígito.");
-			return;
-		}
+			var intent = ViewState;
+			if (intent.SelectedPosition is not { } position)
+			{
+				await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "Selecione uma célula antes de informar um dígito.");
+				return;
+			}
 
-		var applied = await _commandQueue.ExecuteAsync(
-			() => _session.EnterDigit(position, intent.InputMode, digit), cancellationToken).ConfigureAwait(false);
-		await MainThread.InvokeOnMainThreadAsync(() =>
-		{
-			StatusMessage = applied ? string.Empty : "A célula selecionada não aceita essa alteração.";
-			PublishState();
-		});
+			var applied = await _commandQueue.ExecuteAsync(
+				() => _session.EnterDigit(position, intent.InputMode, digit), cancellationToken).ConfigureAwait(false);
+			await MainThread.InvokeOnMainThreadAsync(() =>
+			{
+				StatusMessage = applied ? string.Empty : "A célula selecionada não aceita essa alteração.";
+				PublishState();
+			});
+		}, cancellationToken).ConfigureAwait(false);
 	}
 
 	public void MoveSelection(int rowDelta, int columnDelta)
 	{
-		var current = ViewState.SelectedPosition ?? new CellPosition(0, 0);
+		if (ViewState.SelectedPosition is not { } current)
+		{
+			SelectCell(new CellPosition(0, 0));
+			return;
+		}
+
 		var row = current.Row + rowDelta;
 		var column = current.Column + columnDelta;
 		if (row is < 0 or > 8 || column is < 0 or > 8)
@@ -92,12 +100,22 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[RelayCommand]
 	private void ToggleInputMode()
 	{
-		_session.SetInputMode(_session.InputMode == GameInputMode.Answer ? GameInputMode.Candidate : GameInputMode.Answer);
-		PublishState();
+		try
+		{
+			_session.SetInputMode(_session.InputMode == GameInputMode.Answer ? GameInputMode.Candidate : GameInputMode.Answer);
+			PublishState();
+		}
+		catch (Exception exception)
+		{
+			ReportUnexpectedFailure(exception);
+		}
 	}
 
 	[RelayCommand(AllowConcurrentExecutions = false)]
-	private async Task ClearSelectedAsync(CancellationToken cancellationToken)
+	private Task ClearSelectedAsync(CancellationToken cancellationToken) =>
+		ExecuteRecoverablyAsync(() => ClearSelectedCoreAsync(cancellationToken), cancellationToken);
+
+	private async Task ClearSelectedCoreAsync(CancellationToken cancellationToken)
 	{
 		var intent = ViewState;
 		var cleared = intent.SelectedPosition is { } position && await _commandQueue.ExecuteAsync(
@@ -110,7 +128,10 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	}
 
 	[RelayCommand]
-	private async Task AutoFillCandidatesAsync(CancellationToken cancellationToken)
+	private Task AutoFillCandidatesAsync(CancellationToken cancellationToken) =>
+		ExecuteRecoverablyAsync(() => AutoFillCandidatesCoreAsync(cancellationToken), cancellationToken);
+
+	private async Task AutoFillCandidatesCoreAsync(CancellationToken cancellationToken)
 	{
 		var changed = await _commandQueue.ExecuteAsync(_session.AutoFillCandidates, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
@@ -121,7 +142,10 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	}
 
 	[RelayCommand(AllowConcurrentExecutions = false)]
-	private async Task UndoAsync(CancellationToken cancellationToken)
+	private Task UndoAsync(CancellationToken cancellationToken) =>
+		ExecuteRecoverablyAsync(() => UndoCoreAsync(cancellationToken), cancellationToken);
+
+	private async Task UndoCoreAsync(CancellationToken cancellationToken)
 	{
 		var undone = await _commandQueue.ExecuteAsync(_session.Undo, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
@@ -132,7 +156,10 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	}
 
 	[RelayCommand(AllowConcurrentExecutions = false)]
-	private async Task RedoAsync(CancellationToken cancellationToken)
+	private Task RedoAsync(CancellationToken cancellationToken) =>
+		ExecuteRecoverablyAsync(() => RedoCoreAsync(cancellationToken), cancellationToken);
+
+	private async Task RedoCoreAsync(CancellationToken cancellationToken)
 	{
 		var redone = await _commandQueue.ExecuteAsync(_session.Redo, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
@@ -145,11 +172,18 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[RelayCommand]
 	private void TogglePause()
 	{
-		if (_session.IsPaused)
-			_session.Resume();
-		else
-			_session.Pause();
-		PublishState();
+		try
+		{
+			if (_session.IsPaused)
+				_session.Resume();
+			else
+				_session.Pause();
+			PublishState();
+		}
+		catch (Exception exception)
+		{
+			ReportUnexpectedFailure(exception);
+		}
 	}
 
 	[RelayCommand]
@@ -165,9 +199,11 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		try
 		{
 			var hint = await _session.RequestNextHintAsync(cancellationToken).ConfigureAwait(false);
+			if (hint is not null && hint.BoardRevision != _session.BoardRevision)
+				hint = null;
 			await MainThread.InvokeOnMainThreadAsync(() =>
 			{
-				if (hint is null && _session.IsHintPending)
+				if (hint is null)
 					HintMessage = string.Empty;
 				else
 				{
@@ -178,7 +214,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 						HintStatus.InconsistentState => "Corrija os conflitos para pedir uma dica.",
 						HintStatus.PuzzleSolved => "O tabuleiro já está resolvido.",
 						HintStatus.ValueNotConfirmed => "Não foi possível confirmar esta ação.",
-						_ => "A solicitação de dica foi cancelada."
+						_ => string.Empty
 					};
 				}
 				PublishState();
@@ -209,7 +245,10 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	}
 
 	[RelayCommand(AllowConcurrentExecutions = false)]
-	private async Task CompleteAsync(CancellationToken cancellationToken)
+	private Task CompleteAsync(CancellationToken cancellationToken) =>
+		ExecuteRecoverablyAsync(() => CompleteCoreAsync(cancellationToken), cancellationToken);
+
+	private async Task CompleteCoreAsync(CancellationToken cancellationToken)
 	{
 		var result = await _commandQueue.ExecuteAsync(_session.TryComplete, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
@@ -243,6 +282,8 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	{
 		var nextState = _session.ViewState;
 		IsHintPending = _session.IsHintPending;
+		if (_session.HintAnalysisFailed)
+			StatusMessage = "Não foi possível calcular a dica. Tente novamente.";
 		if (nextState.BoardRevision != _lastBoardRevision)
 		{
 			_lastBoardRevision = nextState.BoardRevision;
@@ -253,6 +294,31 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 			HintMessage = FormatHint(hint);
 		OnPropertyChanged(nameof(DifficultyLabel));
 		OnPropertyChanged(nameof(PauseButtonText));
+	}
+
+	public void ReportUnexpectedFailure(Exception exception)
+	{
+		ArgumentNullException.ThrowIfNull(exception);
+		var correlationId = Guid.NewGuid().ToString("N");
+		_logger.LogError(exception, "Recoverable game action failed (CorrelationId {CorrelationId})", correlationId);
+		MainThread.BeginInvokeOnMainThread(() =>
+			StatusMessage = $"Ocorreu um erro inesperado. Tente novamente. Código: {correlationId}");
+	}
+
+	private async Task ExecuteRecoverablyAsync(Func<Task> action, CancellationToken cancellationToken = default)
+	{
+		try
+		{
+			await action();
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			// View teardown cancels queued work and is not a player-visible failure.
+		}
+		catch (Exception exception)
+		{
+			ReportUnexpectedFailure(exception);
+		}
 	}
 
 	private static string FormatHint(HintResult? hint) => hint?.Status switch

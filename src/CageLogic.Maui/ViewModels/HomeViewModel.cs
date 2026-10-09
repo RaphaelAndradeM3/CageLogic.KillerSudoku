@@ -67,14 +67,18 @@ public partial class HomeViewModel : ObservableObject
 				SelectedDifficulty,
 				new GenerationBudget(maxAttempts: 8, timeLimit: TimeSpan.FromSeconds(30)));
 			var result = await _generatePuzzle.ExecuteAsync(request, generationCancellation.Token).ConfigureAwait(false);
+			generationCancellation.Token.ThrowIfCancellationRequested();
 
 			if (result.IsSuccess && result.GeneratedPuzzle is not null)
 			{
 				var session = await Task.Run(
-					() => new GameSession(result.GeneratedPuzzle, getHintUseCase: _getHintUseCase))
+					() => new GameSession(result.GeneratedPuzzle, getHintUseCase: _getHintUseCase),
+					generationCancellation.Token)
 					.ConfigureAwait(false);
+				generationCancellation.Token.ThrowIfCancellationRequested();
 				await MainThread.InvokeOnMainThreadAsync(async () =>
 				{
+					generationCancellation.Token.ThrowIfCancellationRequested();
 					_sessionStore.Start(session);
 					StatusMessage = string.Empty;
 					await Shell.Current.GoToAsync(nameof(GamePage));

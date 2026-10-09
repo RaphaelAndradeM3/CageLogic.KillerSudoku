@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
-using Microsoft.Maui.ApplicationModel;
 
 namespace CageLogic.Maui.Logging;
 
@@ -18,6 +17,8 @@ public sealed class HostExceptionBoundary(ILogger<HostExceptionBoundary> logger)
 			return;
 
 		_registered = true;
+		// Runtime-level exception events are last-chance diagnostics. Recoverable UI operations
+		// show player-safe errors at their entry points instead of relying on a dying process to display an alert.
 		AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
 		{
 			Handle(eventArgs.ExceptionObject as Exception, "AppDomain.UnhandledException");
@@ -48,28 +49,6 @@ public sealed class HostExceptionBoundary(ILogger<HostExceptionBoundary> logger)
 		catch (Exception loggingFailure)
 		{
 			Trace.WriteLine($"Unhandled host exception; correlation {correlationId}; logging fallback {loggingFailure.GetType().Name}");
-		}
-
-		try
-		{
-			MainThread.BeginInvokeOnMainThread(async () =>
-			{
-				try
-				{
-					var page = Microsoft.Maui.Controls.Application.Current?.Windows
-						.FirstOrDefault(window => window.Page is not null)?.Page;
-					if (page is not null)
-						await page.DisplayAlertAsync("Erro inesperado", $"Ocorreu um erro inesperado. Código: {correlationId}", "OK");
-				}
-				catch (Exception displayFailure)
-				{
-					Trace.WriteLine($"Could not display safe host error message: {displayFailure.GetType().Name}");
-				}
-			});
-		}
-		catch (Exception dispatchFailure)
-		{
-			Trace.WriteLine($"Could not dispatch safe host error message: {dispatchFailure.GetType().Name}");
 		}
 	}
 

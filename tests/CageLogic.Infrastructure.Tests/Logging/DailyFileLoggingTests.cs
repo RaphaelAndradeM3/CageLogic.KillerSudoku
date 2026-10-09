@@ -92,6 +92,29 @@ public sealed class DailyFileLoggingTests
 	}
 
 	[Test]
+	public void CreateLoggerProvider_RedactsCredentialPatternsAndOmitsRawExceptionDetails()
+	{
+		WithTemporaryDirectory(directory =>
+		{
+			using var logging = CreateLoggingSession(directory);
+			var logger = logging.LoggerFactory.CreateLogger("session");
+			logger.LogInformation("Request rejected: token=literal-secret {Details}", "authorization: Bearer nested-secret");
+			logger.LogError(new InvalidOperationException("password=exception-secret at C:\\Users\\private\\state.json"), "Action failed");
+			logging.Dispose();
+
+			var messageLog = File.ReadAllText(FindLog(directory, "messages-*.log"));
+			var errorLog = File.ReadAllText(FindLog(directory, "errors-*.log"));
+			Assert.That(messageLog, Does.Contain("token=[REDACTED]"));
+			Assert.That(messageLog, Does.Contain("authorization: [REDACTED]"));
+			Assert.That(messageLog, Does.Not.Contain("literal-secret"));
+			Assert.That(messageLog, Does.Not.Contain("nested-secret"));
+			Assert.That(errorLog, Does.Contain(nameof(InvalidOperationException)));
+			Assert.That(errorLog, Does.Not.Contain("exception-secret"));
+			Assert.That(errorLog, Does.Not.Contain("C:\\Users\\private"));
+		});
+	}
+
+	[Test]
 	public void CreateLoggerProvider_UsesFallbackWhenFileLoggerCannotBeInitialized()
 	{
 		WithTemporaryDirectory(directory =>

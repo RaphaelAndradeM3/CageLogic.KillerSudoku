@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CageLogic.Application.Hints;
 using CageLogic.Domain.Board;
 
@@ -39,8 +40,12 @@ public sealed class GameSessionHintCoordinator
 
 	public Task<HintResult?> RequestNextHintAsync(CancellationToken cancellationToken = default)
 	{
-		GameSessionHintStateChangedEventArgs? changed = null;
+		GameSessionHintStateChangedEventArgs changed;
 		Task<HintResult?> task;
+		HintRequest? requestToExecute = null;
+		CancellationTokenSource? owner = null;
+		CancellationToken executionToken = default;
+		TaskCompletionSource<HintResult?>? completion = null;
 		lock (_sync)
 		{
 			if (_currentTask is { IsCompleted: false })
@@ -48,11 +53,11 @@ public sealed class GameSessionHintCoordinator
 
 			var current = _getCurrentBoard();
 			var level = (HintLevel)Math.Clamp(_nextLevel, 1, 3);
+			_currentHint = null;
 			if (!current.IsValid)
 			{
 				_currentHint = new HintResult(current.Revision, HintStatus.InconsistentState, level: level);
 				_currentTask = Task.FromResult<HintResult?>(_currentHint);
-				changed = CreateStateChangedArgs();
 				task = _currentTask;
 			}
 			else
@@ -60,16 +65,20 @@ public sealed class GameSessionHintCoordinator
 				var request = new HintRequest(_puzzleContext, current.Board, level, current.Revision);
 				_cancellation?.Dispose();
 				_cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-				_currentHint = null;
-				var owner = _cancellation;
-				var completion = new TaskCompletionSource<HintResult?>(TaskCreationOptions.RunContinuationsAsynchronously);
+				owner = _cancellation;
+				executionToken = owner.Token;
+				completion = new TaskCompletionSource<HintResult?>(TaskCreationOptions.RunContinuationsAsynchronously);
+				requestToExecute = request;
 				_currentTask = completion.Task;
 				task = completion.Task;
-				_ = ExecuteAsync(request, owner, owner.Token, completion);
 			}
+
+			changed = CreateStateChangedArgs(current.Revision, analysisFailed: false);
 		}
-		if (changed is not null)
-			StateChanged?.Invoke(this, changed);
+
+		NotifyStateChanged(changed);
+		if (requestToExecute is not null && owner is not null && completion is not null)
+			_ = ExecuteAsync(requestToExecute, owner, executionToken, completion);
 		return task;
 	}
 
@@ -79,9 +88,10 @@ public sealed class GameSessionHintCoordinator
 			return _currentTask ?? Task.FromResult(_currentHint);
 	}
 
-	/// <summary>Invalidates only analyses made stale by a value revision and restarts pending work at level one.</summary>
+	/// <summary>Invalidates analyses made stale by a value revision and restarts pending work at level one.</summary>
 	public void OnBoardValuesChanged()
 	{
+		var current = _getCurrentBoard();
 		CancellationTokenSource? cancellation;
 		bool restart;
 		GameSessionHintStateChangedEventArgs changed;
@@ -93,18 +103,14 @@ public sealed class GameSessionHintCoordinator
 			_currentTask = null;
 			_currentHint = null;
 			_nextLevel = 1;
-			changed = CreateStateChangedArgs();
+			changed = CreateStateChangedArgs(current.Revision, analysisFailed: false);
 		}
+
 		cancellation?.Cancel();
 		cancellation?.Dispose();
-		StateChanged?.Invoke(this, changed);
+		NotifyStateChanged(changed);
 		if (restart)
-		{
-			_ = RequestNextHintAsync();
-			lock (_sync)
-				changed = CreateStateChangedArgs();
-			StateChanged?.Invoke(this, changed);
-		}
+			_ = ObserveRefreshAsync(RequestNextHintAsync());
 	}
 
 	private async Task ExecuteAsync(
@@ -122,7 +128,10 @@ public sealed class GameSessionHintCoordinator
 			lock (_sync)
 			{
 				var current = _getCurrentBoard();
-				if (!token.IsCancellationRequested && request.BoardRevision == current.Revision && ReferenceEquals(_cancellation, owner))
+				if (!token.IsCancellationRequested &&
+					request.BoardRevision == current.Revision &&
+					result.BoardRevision == current.Revision &&
+					ReferenceEquals(_cancellation, owner))
 				{
 					_currentHint = result;
 					if (result.Status == HintStatus.Available && _countedLevels.Add((request.BoardRevision, request.Level)))
@@ -131,7 +140,15 @@ public sealed class GameSessionHintCoordinator
 						_nextLevel = Math.Min(3, (int)request.Level + 1);
 					}
 					accepted = result;
-					changed = CreateStateChangedArgs();
+					changed = CreateStateChangedArgs(current.Revision, analysisFailed: false);
+				}
+				else if (!token.IsCancellationRequested &&
+					request.BoardRevision == current.Revision &&
+					ReferenceEquals(_cancellation, owner) &&
+					result.BoardRevision != current.Revision)
+				{
+					failure = new InvalidOperationException("The hint result does not match the current board revision.");
+					changed = CreateStateChangedArgs(current.Revision, analysisFailed: true);
 				}
 			}
 		}
@@ -142,6 +159,12 @@ public sealed class GameSessionHintCoordinator
 		catch (Exception exception)
 		{
 			failure = exception;
+			lock (_sync)
+			{
+				var current = _getCurrentBoard();
+				if (ReferenceEquals(_cancellation, owner) && request.BoardRevision == current.Revision)
+					changed = CreateStateChangedArgs(current.Revision, analysisFailed: true);
+			}
 		}
 		finally
 		{
@@ -155,22 +178,65 @@ public sealed class GameSessionHintCoordinator
 				}
 			}
 		}
-		if (changed is not null)
-			StateChanged?.Invoke(this, changed);
+
+		// Resolve the request before notifying observers so a faulty subscriber can never strand its caller.
+		if (accepted is not null && _getCurrentBoard().Revision != accepted.BoardRevision)
+			accepted = null;
+
 		if (failure is null)
 			completion.TrySetResult(accepted);
 		else
 			completion.TrySetException(failure);
+
+		if (changed is not null)
+			NotifyStateChanged(changed);
 	}
 
-	private GameSessionHintStateChangedEventArgs CreateStateChangedArgs() =>
-		new(_currentHint, _displayedHintLevelCount);
+	private static async Task ObserveRefreshAsync(Task<HintResult?> refreshedTask)
+	{
+		try
+		{
+			await refreshedTask.ConfigureAwait(false);
+		}
+		catch
+		{
+			// The coordinator publishes a player-safe failure state before completing this internal refresh task.
+		}
+	}
+
+	private GameSessionHintStateChangedEventArgs CreateStateChangedArgs(long revision, bool analysisFailed) =>
+		new(_currentHint, _displayedHintLevelCount, revision, analysisFailed);
+
+	private void NotifyStateChanged(GameSessionHintStateChangedEventArgs eventArgs)
+	{
+		var handlers = StateChanged;
+		if (handlers is null)
+			return;
+
+		foreach (EventHandler<GameSessionHintStateChangedEventArgs> handler in handlers.GetInvocationList())
+		{
+			try
+			{
+				handler(this, eventArgs);
+			}
+			catch (Exception exception)
+			{
+				Trace.WriteLine($"Hint state observer failed: {exception.GetType().Name}");
+			}
+		}
+	}
 }
 
 public sealed record HintBoardSnapshot(SudokuBoard Board, long Revision, bool IsValid);
 
-public sealed class GameSessionHintStateChangedEventArgs(HintResult? hint, int displayedHintLevelCount) : EventArgs
+public sealed class GameSessionHintStateChangedEventArgs(
+	HintResult? hint,
+	int displayedHintLevelCount,
+	long boardRevision,
+	bool analysisFailed) : EventArgs
 {
 	public HintResult? Hint { get; } = hint;
 	public int DisplayedHintLevelCount { get; } = displayedHintLevelCount;
+	public long BoardRevision { get; } = boardRevision;
+	public bool AnalysisFailed { get; } = analysisFailed;
 }

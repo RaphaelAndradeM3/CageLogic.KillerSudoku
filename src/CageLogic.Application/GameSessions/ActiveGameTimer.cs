@@ -7,12 +7,27 @@ public sealed class ActiveGameTimer
 	private readonly object _sync = new();
 	private TimeSpan _accumulated;
 	private long? _activeSince;
-	private bool _isPaused;
+	private bool _isPaused = true;
+	private bool _hasStarted;
 
 	public ActiveGameTimer(TimeProvider? timeProvider = null)
 	{
 		_timeProvider = timeProvider ?? TimeProvider.System;
-		_activeSince = _timeProvider.GetTimestamp();
+	}
+
+	/// <summary>Starts elapsed time when the player first reaches the playable board.</summary>
+	public bool Start()
+	{
+		lock (_sync)
+		{
+			if (_hasStarted)
+				return false;
+
+			_hasStarted = true;
+			_isPaused = false;
+			_activeSince = _timeProvider.GetTimestamp();
+			return true;
+		}
 	}
 
 	public TimeSpan Elapsed
@@ -53,6 +68,14 @@ public sealed class ActiveGameTimer
 	{
 		lock (_sync)
 		{
+			if (!_hasStarted)
+			{
+				_hasStarted = true;
+				_activeSince = _timeProvider.GetTimestamp();
+				_isPaused = false;
+				return;
+			}
+
 			if (!_isPaused)
 				return;
 

@@ -11,7 +11,7 @@ namespace CageLogic.Infrastructure.Logging;
 
 public static class SerilogLoggingConfiguration
 {
-	private const string OutputTemplate = "{LocalTimestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}";
+	private const string OutputTemplate = "{LocalTimestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SanitizedMessage} {Properties:j}{NewLine}";
 
 	public static ILoggerProvider CreateLoggerProvider(
 		LoggingOptions options,
@@ -33,14 +33,14 @@ public static class SerilogLoggingConfiguration
 				.WriteTo.File(
 					Path.Combine(options.LogDirectory, "messages-.log"),
 					rollingInterval: RollingInterval.Day,
-					retainedFileCountLimit: null,
+					retainedFileCountLimit: options.RetentionDays,
 					outputTemplate: OutputTemplate,
 					restrictedToMinimumLevel: LogEventLevel.Information,
 					buffered: false)
 				.WriteTo.File(
 					Path.Combine(options.LogDirectory, "errors-.log"),
 					rollingInterval: RollingInterval.Day,
-					retainedFileCountLimit: null,
+					retainedFileCountLimit: options.RetentionDays,
 					outputTemplate: OutputTemplate,
 					restrictedToMinimumLevel: LogEventLevel.Error,
 					buffered: false)

@@ -9,6 +9,10 @@ public sealed class GameSessionTimerTests
 	{
 		var timeProvider = new ManualTimeProvider();
 		var session = new GameSession(GameSessionTestData.CreateGeneratedPuzzle(), timeProvider: timeProvider);
+		Assert.That(session.IsPaused, Is.True);
+		timeProvider.Advance(TimeSpan.FromSeconds(30));
+		Assert.That(session.ActiveElapsed, Is.EqualTo(TimeSpan.Zero));
+		session.Start();
 		timeProvider.Advance(TimeSpan.FromSeconds(12));
 
 		session.PauseForBackground();
@@ -28,6 +32,7 @@ public sealed class GameSessionTimerTests
 	{
 		var timeProvider = new ManualTimeProvider();
 		var session = new GameSession(GameSessionTestData.CreateGeneratedPuzzle(), timeProvider: timeProvider);
+		session.Start();
 		timeProvider.Advance(TimeSpan.FromSeconds(35));
 		session.Pause();
 		session.Pause();

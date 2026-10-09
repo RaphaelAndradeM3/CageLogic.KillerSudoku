@@ -76,6 +76,79 @@ public sealed class GameSessionHintTests
 	}
 
 	[Test]
+	public async Task HintObserverFailure_DoesNotLeaveRequestPending()
+	{
+		var session = new GameSession(GameSessionTestData.CreateGeneratedPuzzle());
+		session.ViewStateChanged += (_, _) => throw new InvalidOperationException("Observer failure.");
+
+		var hint = await session.RequestNextHintAsync().WaitAsync(TimeSpan.FromSeconds(5));
+
+		Assert.That(hint, Is.Not.Null);
+		Assert.That(session.IsHintPending, Is.False);
+	}
+
+	[Test]
+	public async Task MismatchedHintRevision_IsRejectedAndReportedAsFailure()
+	{
+		var useCase = new GetHintUseCase();
+		var session = new GameSession(
+			GameSessionTestData.CreateGeneratedPuzzle(),
+			hintExecutor: (request, token) => useCase.ExecuteAsync(
+				new HintRequest(request.PuzzleContext, request.CurrentBoard, request.Level, request.BoardRevision + 1),
+				token));
+
+		await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+			await session.RequestNextHintAsync().WaitAsync(TimeSpan.FromSeconds(5)));
+
+		Assert.That(session.IsHintPending, Is.False);
+		Assert.That(session.HintAnalysisFailed, Is.True);
+		Assert.That(session.DisplayedHintLevelCount, Is.Zero);
+	}
+
+	[Test]
+	public async Task RefreshedHintFailure_ClearsPendingStateForThePage()
+	{
+		var firstStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var releaseFirst = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var refreshedStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var session = new GameSession(
+			GameSessionTestData.CreateGeneratedPuzzle(),
+			hintExecutor: async (request, _) =>
+			{
+				if (request.BoardRevision == 0)
+				{
+					firstStarted.TrySetResult();
+					await releaseFirst.Task;
+				}
+				else
+				{
+					refreshedStarted.TrySetResult();
+					throw new InvalidOperationException("Refreshed analysis failed.");
+				}
+
+				return await new GetHintUseCase().ExecuteAsync(request, CancellationToken.None);
+			});
+		var failurePublished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		session.ViewStateChanged += (_, _) =>
+		{
+			if (session.HintAnalysisFailed)
+				failurePublished.TrySetResult();
+		};
+
+		var originalTask = session.RequestNextHintAsync();
+		await firstStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		session.SelectCell(new CellPosition(0, 0));
+		session.EnterDigit(1);
+		await refreshedStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		releaseFirst.TrySetResult();
+
+		Assert.That(await originalTask.WaitAsync(TimeSpan.FromSeconds(5)), Is.Null);
+		await failurePublished.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		Assert.That(session.IsHintPending, Is.False);
+		Assert.That(session.HintAnalysisFailed, Is.True);
+	}
+
+	[Test]
 	public async Task StaleResultIsDiscarded_AndBoardEditRestartsAtExplanation()
 	{
 		var firstRequestStarted = new TaskCompletionSource<HintRequest>(TaskCreationOptions.RunContinuationsAsynchronously);

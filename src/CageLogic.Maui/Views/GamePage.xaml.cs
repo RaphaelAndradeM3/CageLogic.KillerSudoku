@@ -11,6 +11,7 @@ public partial class GamePage : ContentPage
 	private readonly BoardInputBehavior _inputBehavior = new();
 	private readonly GameSessionLifecycleBehavior _lifecycle = new();
 	private bool _summaryNavigationStarted;
+	private bool _cleanedUp;
 
 	public GamePage(GamePageViewModel viewModel)
 	{
@@ -22,11 +23,14 @@ public partial class GamePage : ContentPage
 		_inputBehavior.KeyPressed += OnKeyPressed;
 		Behaviors.Add(_inputBehavior);
 		BoardView.SetViewState(_viewModel.ViewState);
+		if (Shell.Current is { } shell)
+			shell.Navigated += OnShellNavigated;
 	}
 
 	protected override void OnAppearing()
 	{
 		base.OnAppearing();
+		_viewModel.Session.Start();
 		if (Window is not null)
 			_lifecycle.Attach(Window, _viewModel.Session);
 	}
@@ -35,6 +39,22 @@ public partial class GamePage : ContentPage
 	{
 		_lifecycle.Detach(pause: true);
 		base.OnDisappearing();
+	}
+
+	protected override bool OnBackButtonPressed()
+	{
+		MainThread.BeginInvokeOnMainThread(async () =>
+		{
+			try
+			{
+				await Shell.Current.GoToAsync("..");
+			}
+			catch (Exception exception)
+			{
+				_viewModel.ReportUnexpectedFailure(exception);
+			}
+		});
+		return true;
 	}
 
 	private void OnCellSelected(object? sender, BoardCellSelectedEventArgs eventArgs) =>
@@ -51,7 +71,8 @@ public partial class GamePage : ContentPage
 			if (_viewModel.ViewState.Summary is not null && !_summaryNavigationStarted)
 			{
 				_summaryNavigationStarted = true;
-				MainThread.BeginInvokeOnMainThread(async () => await Shell.Current.GoToAsync(nameof(SessionSummaryPage)));
+				MainThread.BeginInvokeOnMainThread(async () =>
+					await RunRecoverableActionAsync(() => Shell.Current.GoToAsync(nameof(SessionSummaryPage))));
 			}
 		}
 	}
@@ -59,39 +80,86 @@ public partial class GamePage : ContentPage
 	private async void OnDigitClicked(object? sender, EventArgs eventArgs)
 	{
 		if (sender is Button button && int.TryParse(button.Text, out var digit))
-			await _viewModel.EnterDigitAsync(digit);
+			await RunRecoverableActionAsync(() => _viewModel.EnterDigitAsync(digit));
 	}
 
 	private async void OnKeyPressed(object? sender, BoardKeyInputEventArgs eventArgs)
 	{
-		if (eventArgs.ControlPressed)
+		await RunRecoverableActionAsync(async () =>
 		{
-			if (eventArgs.Key.Equals("Z", StringComparison.OrdinalIgnoreCase))
-				_viewModel.UndoCommand.Execute(null);
-			else if (eventArgs.Key.Equals("Y", StringComparison.OrdinalIgnoreCase))
-				_viewModel.RedoCommand.Execute(null);
-			return;
-		}
+			if (eventArgs.ControlPressed)
+			{
+				if (eventArgs.Key.Equals("Z", StringComparison.OrdinalIgnoreCase))
+					await _viewModel.UndoCommand.ExecuteAsync(null);
+				else if (eventArgs.Key.Equals("Y", StringComparison.OrdinalIgnoreCase))
+					await _viewModel.RedoCommand.ExecuteAsync(null);
+				return;
+			}
 
-		if (BoardInputBehavior.TryGetDigit(eventArgs.Key, out var digit))
-		{
-			await _viewModel.EnterDigitAsync(digit);
-			return;
-		}
+			if (BoardInputBehavior.TryGetDigit(eventArgs.Key, out var digit))
+			{
+				await _viewModel.EnterDigitAsync(digit);
+				return;
+			}
 
-		if (eventArgs.Key.Contains("Left", StringComparison.OrdinalIgnoreCase))
-			_viewModel.MoveSelection(0, -1);
-		else if (eventArgs.Key.Contains("Right", StringComparison.OrdinalIgnoreCase))
-			_viewModel.MoveSelection(0, 1);
-		else if (eventArgs.Key.Contains("Up", StringComparison.OrdinalIgnoreCase))
-			_viewModel.MoveSelection(-1, 0);
-		else if (eventArgs.Key.Contains("Down", StringComparison.OrdinalIgnoreCase))
-			_viewModel.MoveSelection(1, 0);
-		else if (eventArgs.Key.Contains("Backspace", StringComparison.OrdinalIgnoreCase) ||
-			eventArgs.Key.Contains("Delete", StringComparison.OrdinalIgnoreCase) ||
-			eventArgs.Key.Equals("Del", StringComparison.OrdinalIgnoreCase))
-			_viewModel.ClearSelectedCommand.Execute(null);
+			if (BoardInputBehavior.TryGetDirection(eventArgs.Key, out var rowDelta, out var columnDelta))
+				_viewModel.MoveSelection(rowDelta, columnDelta);
+			else if (BoardInputBehavior.IsClearKey(eventArgs.Key))
+				await _viewModel.ClearSelectedCommand.ExecuteAsync(null);
+		});
 	}
 
-	private async void OnBackClicked(object? sender, EventArgs eventArgs) => await Shell.Current.GoToAsync("..");
+	private async void OnBackClicked(object? sender, EventArgs eventArgs) =>
+		await RunRecoverableActionAsync(() => Shell.Current.GoToAsync(".."));
+
+	private async Task RunRecoverableActionAsync(Func<Task> action)
+	{
+		try
+		{
+			await action();
+		}
+		catch (Exception exception)
+		{
+			_viewModel.ReportUnexpectedFailure(exception);
+		}
+	}
+
+	private void OnShellNavigated(object? sender, ShellNavigatedEventArgs eventArgs)
+	{
+		var route = eventArgs.Current.Location.OriginalString.TrimEnd('/');
+		var currentSegment = route.Split('/').LastOrDefault()?.Split('?')[0];
+		if (string.Equals(currentSegment, nameof(GamePage), StringComparison.OrdinalIgnoreCase))
+			return;
+
+		try
+		{
+			if (string.Equals(currentSegment, nameof(SessionSummaryPage), StringComparison.OrdinalIgnoreCase) &&
+				Navigation.NavigationStack.Contains(this))
+				Navigation.RemovePage(this);
+		}
+		catch (Exception exception)
+		{
+			_viewModel.ReportUnexpectedFailure(exception);
+		}
+		finally
+		{
+			Cleanup();
+		}
+	}
+
+	private void Cleanup()
+	{
+		if (_cleanedUp)
+			return;
+
+		_cleanedUp = true;
+		if (Shell.Current is { } shell)
+			shell.Navigated -= OnShellNavigated;
+		_lifecycle.Dispose();
+		BoardView.CellSelected -= OnCellSelected;
+		_viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+		_inputBehavior.KeyPressed -= OnKeyPressed;
+		Behaviors.Remove(_inputBehavior);
+		_viewModel.Dispose();
+	}
 }
