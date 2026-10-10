@@ -64,7 +64,7 @@ Os resultados detalhados, comandos efetivamente usados e limitações de aceita�
 
 ## Publicar
 
-O script [`scripts/publish-windows-android.bat`](scripts/publish-windows-android.bat) publica o app Windows e um APK Android assinado em `artifacts/publish/`. Para Android, ele solicita um keystore persistente, alias e arquivos de senha. Mantenha keystore e senhas fora do repositório e faça backup do keystore usado para distribuir atualizações.
+O script [`scripts/publish-windows-android.bat`](scripts/publish-windows-android.bat) publica o app Windows e um APK Android Release assinado em `artifacts/publish/`, sem pedir credenciais. Na primeira execução, cria uma chave e uma senha aleatórias em `%LOCALAPPDATA%\CageLogic\KillerSudoku\signing` e reutiliza essa identidade nas próximas publicações; os arquivos ficam fora do repositório. Faça backup dessa pasta para preservar a assinatura; se perder a chave, o Android não aceitará o APK seguinte como atualização da instalação existente. Para instalar uma atualização, incremente também `ApplicationVersion` em `src/CageLogic.Maui/CageLogic.Maui.csproj`. Esta chave local destina-se a instalação própria e testes; configure uma chave de lançamento gerenciada e guardada com segurança antes de distribuir pela Play Store.
 
 ## Revisões automatizadas
 

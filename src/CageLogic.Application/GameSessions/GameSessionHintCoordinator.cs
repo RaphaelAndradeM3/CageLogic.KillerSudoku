@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using CageLogic.Application.Hints;
 using CageLogic.Domain.Board;
+using CageLogic.Domain.LogicalSteps;
 
 namespace CageLogic.Application.GameSessions;
 
@@ -11,12 +12,13 @@ public sealed class GameSessionHintCoordinator
 	private readonly HintPuzzleContext _puzzleContext;
 	private readonly Func<HintBoardSnapshot> _getCurrentBoard;
 	private readonly Func<HintRequest, CancellationToken, Task<HintResult>> _execute;
-	private readonly HashSet<(long Revision, HintLevel Level)> _countedLevels = [];
+	private readonly HashSet<(long Revision, LogicalTechniqueId Technique, HintLevel Level)> _countedLevels = [];
+	private readonly HashSet<LogicalTechniqueId> _excludedTechniques = [];
 	private CancellationTokenSource? _cancellation;
 	private Task<HintResult?>? _currentTask;
 	private HintResult? _currentHint;
 	private int _displayedHintLevelCount;
-	private int _nextLevel = 1;
+	private int _nextLevel = (int)HintLevel.Highlights;
 
 	public GameSessionHintCoordinator(
 		HintPuzzleContext puzzleContext,
@@ -66,7 +68,12 @@ public sealed class GameSessionHintCoordinator
 			}
 			else
 			{
-				var request = new HintRequest(_puzzleContext, current.Board, level, current.Revision);
+				var request = new HintRequest(
+					_puzzleContext,
+					current.Board,
+					level,
+					current.Revision,
+					_excludedTechniques);
 				_cancellation?.Dispose();
 				_cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 				owner = _cancellation;
@@ -106,7 +113,8 @@ public sealed class GameSessionHintCoordinator
 			_cancellation = null;
 			_currentTask = null;
 			_currentHint = null;
-			_nextLevel = 1;
+			_nextLevel = (int)HintLevel.Highlights;
+			_excludedTechniques.Clear();
 			changed = CreateStateChangedArgs(current.Revision, analysisFailed: false);
 		}
 
@@ -138,10 +146,26 @@ public sealed class GameSessionHintCoordinator
 					ReferenceEquals(_cancellation, owner))
 				{
 					_currentHint = result;
-					if (result.Status == HintStatus.Available && _countedLevels.Add((request.BoardRevision, request.Level)))
+					if (result.Status == HintStatus.Available && result.TechniqueId is { } techniqueId)
 					{
-						_displayedHintLevelCount++;
-						_nextLevel = Math.Min(3, (int)request.Level + 1);
+						if (_countedLevels.Add((request.BoardRevision, techniqueId, request.Level)))
+							_displayedHintLevelCount++;
+
+						if (request.Level == HintLevel.Action)
+						{
+							if (!_excludedTechniques.Add(techniqueId))
+							{
+								// The use case cycles back only after every available technique was excluded.
+								// Restart from the returned technique so the next request can advance again.
+								_excludedTechniques.Clear();
+								_excludedTechniques.Add(techniqueId);
+							}
+							_nextLevel = (int)HintLevel.Highlights;
+						}
+						else
+						{
+							_nextLevel = Math.Min(3, (int)request.Level + 1);
+						}
 					}
 					accepted = result;
 					changed = CreateStateChangedArgs(current.Revision, analysisFailed: false);

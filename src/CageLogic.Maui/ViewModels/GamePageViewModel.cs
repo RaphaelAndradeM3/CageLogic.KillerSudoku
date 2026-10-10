@@ -2,6 +2,7 @@ using CageLogic.Application.GameSessions;
 using CageLogic.Application.Hints;
 using CageLogic.Application.Progression;
 using CageLogic.Domain.Board;
+using CageLogic.Domain.LogicalSteps;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -36,8 +37,37 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	[ObservableProperty]
 	public partial string HintMessage { get; set; } = string.Empty;
 
+	public bool HasAvailableHint => ViewState?.Hint?.Status == HintStatus.Available;
+	public string HintTechniqueName => ViewState?.Hint?.Status == HintStatus.Available
+		? ViewState.Hint.TechniqueName ?? string.Empty
+		: string.Empty;
+	public string HintProgress => ViewState?.Hint is { Status: HintStatus.Available, Level: { } level }
+		? $"Etapa {(level == HintLevel.Action ? 2 : 1)} de 2"
+		: string.Empty;
+	public string HintButtonText => IsHintPending
+		? "Calculando dica..."
+		: ViewState?.Hint is { Status: HintStatus.Available, Level: HintLevel.Explanation }
+			? HasCageSumHint ? "Ver células e somatório" : "Ver casas destacadas"
+			: ViewState?.Hint is { Status: HintStatus.Available, Level: HintLevel.Highlights }
+				? HasHintCalculation ? "Revelar ação" : "Mostrar eliminação"
+				: ViewState?.Hint is { Status: HintStatus.Available, Level: HintLevel.Action }
+					? "Próxima dica"
+					: "Pedir dica";
+	private bool HasCageSumHint => ViewState?.Hint?.TechniqueId is
+		LogicalTechniqueId.NakedSingle or
+		LogicalTechniqueId.HiddenSingle or
+		LogicalTechniqueId.CageSingle or
+		LogicalTechniqueId.CageCombination or
+		LogicalTechniqueId.CageRegionIntersection or
+		LogicalTechniqueId.RuleOf45;
+	public string HintCalculationTitle => GetHintCalculation(ViewState)?.Title ?? string.Empty;
+	public string HintCalculationFormula => GetHintCalculation(ViewState)?.Formula ?? string.Empty;
+	public string HintCalculationDescription => GetHintCalculation(ViewState)?.Description ?? string.Empty;
+	public bool HasHintCalculation => !string.IsNullOrEmpty(HintCalculationFormula);
+
 	[ObservableProperty]
 	public partial bool IsHintPending { get; set; }
+	partial void OnIsHintPendingChanged(bool value) => OnPropertyChanged(nameof(HintButtonText));
 
 	[ObservableProperty]
 	public partial bool IsSaving { get; set; }
@@ -472,6 +502,15 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		ViewState = nextState;
 		if (nextState.Hint is { } hint)
 			HintMessage = FormatHint(hint);
+		OnPropertyChanged(nameof(HasAvailableHint));
+		OnPropertyChanged(nameof(HintTechniqueName));
+		OnPropertyChanged(nameof(HintProgress));
+		OnPropertyChanged(nameof(HintButtonText));
+		OnPropertyChanged(nameof(HasCageSumHint));
+		OnPropertyChanged(nameof(HintCalculationTitle));
+		OnPropertyChanged(nameof(HintCalculationFormula));
+		OnPropertyChanged(nameof(HintCalculationDescription));
+		OnPropertyChanged(nameof(HasHintCalculation));
 		OnPropertyChanged(nameof(DifficultyLabel));
 		OnPropertyChanged(nameof(PauseButtonText));
 		OnPropertyChanged(nameof(CompleteButtonText));
@@ -506,15 +545,174 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		}
 	}
 
-	private static string FormatHint(HintResult? hint) => hint?.Status switch
+	private static string FormatHint(HintResult? hint)
 	{
-		HintStatus.Available => hint.Explanation ?? string.Empty,
-		HintStatus.NoSafeHint => "Não há uma dica segura para esta posição.",
-		HintStatus.InconsistentState => "Corrija os conflitos para pedir uma dica.",
-		HintStatus.PuzzleSolved => "O tabuleiro já está resolvido.",
-		HintStatus.ValueNotConfirmed => "Não foi possível confirmar esta ação.",
-		_ => string.Empty
+		if (hint?.Status != HintStatus.Available)
+		{
+			return hint?.Status switch
+			{
+				HintStatus.NoSafeHint => "Não há uma dica segura para esta posição.",
+				HintStatus.InconsistentState => "Corrija os conflitos para pedir uma dica.",
+				HintStatus.PuzzleSolved => "O tabuleiro já está resolvido.",
+				HintStatus.ValueNotConfirmed => "Não foi possível confirmar esta ação.",
+				_ => string.Empty
+			};
+		}
+
+		var explanation = hint.Explanation ?? string.Empty;
+		if (hint.Action is not { } action)
+			return explanation;
+
+		return action switch
+		{
+			HintAction.PlaceValue placement =>
+				$"{explanation} A dedução indica {placement.Value} na linha {placement.Position.Row + 1}, coluna {placement.Position.Column + 1}.",
+			HintAction.RemoveCandidates removal =>
+				$"{explanation} Remova {FormatCandidateReferences(removal.Candidates)}.",
+			_ => explanation
+		};
+	}
+
+	private static string FormatCandidateReferences(IReadOnlyList<HintCandidateReference> candidates) =>
+		string.Join(", ", candidates.Select(candidate =>
+			$"{candidate.Value} da linha {candidate.Position.Row + 1}, coluna {candidate.Position.Column + 1}"));
+
+	private static HintCalculation? GetHintCalculation(GameSessionViewState? viewState)
+	{
+		var hint = viewState?.Hint;
+		if (viewState is null || hint is not { Status: HintStatus.Available, Level: HintLevel.Highlights or HintLevel.Action })
+			return null;
+
+		if (hint.ScopeContext is { Kind: LogicalScopeKind.RuleOf45 } scope &&
+			scope.RegionKind is { } regionKind && scope.RegionIndex is { } regionIndex && scope.ResidualSum is { } residual)
+		{
+			var region = GetRegionPositions(regionKind, regionIndex).ToHashSet();
+			var containedTargetSums = viewState.Cages
+				.Where(cage => cage.Positions.All(region.Contains))
+				.OrderBy(cage => cage.Positions.Min(PositionIndex))
+				.Select(cage => cage.TargetSum)
+				.ToArray();
+			var containedSum = containedTargetSums.Sum();
+			var terms = containedTargetSums.Length == 0 ? "0" : string.Join(" + ", containedTargetSums);
+			var regionName = GetRegionName(regionKind, regionIndex);
+			return new HintCalculation(
+				"REGRA DO 45",
+				$"45 − ({terms}) = {residual}",
+				$"A {regionName} soma 45. As gaiolas inteiras destacadas já somam {containedSum}; as partes restantes da região precisam somar {residual}.");
+		}
+
+		var scopePositions = GetHighlightedPositions(hint, HintHighlightRole.Scope);
+		var patternPositions = GetHighlightedPositions(hint, HintHighlightRole.Pattern);
+		var targetPositions = GetHighlightedPositions(hint, HintHighlightRole.Target);
+		var cageTarget = hint.ScopeContext?.TargetSum;
+		GameSessionCageViewState? cage = null;
+		if (hint.ScopeContext?.Kind == LogicalScopeKind.Cage && cageTarget is { } exactTarget)
+		{
+			cage = viewState.Cages.FirstOrDefault(candidate =>
+				candidate.TargetSum == exactTarget && candidate.Positions.ToHashSet().SetEquals(scopePositions));
+		}
+		else if (hint.ScopeContext?.Kind == LogicalScopeKind.CageRegionIntersection && cageTarget is { } intersectionTarget)
+		{
+			var pattern = patternPositions.ToHashSet();
+			cage = viewState.Cages.FirstOrDefault(candidate =>
+				candidate.TargetSum == intersectionTarget && pattern.Count > 0 && pattern.All(candidate.Positions.Contains));
+		}
+		else if (targetPositions.Count > 0)
+		{
+			var target = targetPositions[0];
+			cage = viewState.Cages.FirstOrDefault(candidate => candidate.Positions.Contains(target));
+		}
+
+		return cage is null ? null : BuildCageCalculation(viewState, cage);
+	}
+
+	private static HintCalculation BuildCageCalculation(GameSessionViewState viewState, GameSessionCageViewState cage)
+	{
+		var cellValues = viewState.Cells.ToDictionary(cell => cell.Position, cell => cell.Value);
+		var filledValues = cage.Positions
+			.Select(position => cellValues[position])
+			.Where(value => value.HasValue)
+			.Select(value => value!.Value)
+			.ToArray();
+		var emptyCount = cage.Positions.Count - filledValues.Length;
+		var remaining = cage.TargetSum - filledValues.Sum();
+		var knownTerms = filledValues.Length == 0 ? "0" : string.Join(" + ", filledValues);
+		var combinations = GetArithmeticCombinations(remaining, emptyCount, filledValues.ToHashSet());
+		var formula = filledValues.Length == 0
+			? $"{cage.TargetSum} = soma das {emptyCount} casas vazias"
+			: $"{cage.TargetSum} − ({knownTerms}) = {remaining}";
+		var description = emptyCount == 0
+			? $"A gaiola está completa: {knownTerms} fecha exatamente o alvo {cage.TargetSum}."
+			: $"As {emptyCount} {(emptyCount == 1 ? "casa vazia" : "casas vazias")} ainda precisam somar {remaining}. " +
+			  FormatArithmeticCombinations(combinations);
+		return new HintCalculation("SOMATÓRIO DA GAIOLA", formula, description);
+	}
+
+	private static IReadOnlyList<string> GetArithmeticCombinations(int targetSum, int cellCount, IReadOnlySet<int> usedValues)
+	{
+		var combinations = new List<string>();
+		Build(1, 0, []);
+		return combinations;
+
+		void Build(int firstDigit, int sum, List<int> values)
+		{
+			if (values.Count == cellCount)
+			{
+				if (sum == targetSum)
+					combinations.Add(string.Join(" + ", values));
+				return;
+			}
+
+			for (var digit = firstDigit; digit <= 9; digit++)
+			{
+				if (usedValues.Contains(digit) || sum + digit > targetSum)
+					continue;
+
+				values.Add(digit);
+				Build(digit + 1, sum + digit, values);
+				values.RemoveAt(values.Count - 1);
+			}
+		}
+	}
+
+	private static string FormatArithmeticCombinations(IReadOnlyList<string> combinations)
+	{
+		if (combinations.Count == 0)
+			return "Não há combinação de dígitos distintos que feche essa soma.";
+
+		const int maximumDisplayedCombinations = 6;
+		var displayed = combinations.Take(maximumDisplayedCombinations).ToArray();
+		var suffix = combinations.Count > displayed.Length
+			? $" e mais {combinations.Count - displayed.Length} combinações"
+			: string.Empty;
+		return $"Combinações pela soma, sem repetir dígitos: {string.Join(" | ", displayed)}{suffix}. Elas também precisam respeitar linha, coluna e bloco.";
+	}
+
+	private static IReadOnlyList<CellPosition> GetHighlightedPositions(HintResult hint, HintHighlightRole role) =>
+		hint.Highlights.TryGetValue(role, out var positions) ? positions : Array.Empty<CellPosition>();
+
+	private static IEnumerable<CellPosition> GetRegionPositions(LogicalScopeKind kind, int index) => kind switch
+	{
+		LogicalScopeKind.Row => Enumerable.Range(0, 9).Select(column => new CellPosition(index, column)),
+		LogicalScopeKind.Column => Enumerable.Range(0, 9).Select(row => new CellPosition(row, index)),
+		LogicalScopeKind.Block =>
+			from row in Enumerable.Range((index / 3) * 3, 3)
+			from column in Enumerable.Range((index % 3) * 3, 3)
+			select new CellPosition(row, column),
+		_ => Array.Empty<CellPosition>()
 	};
+
+	private static string GetRegionName(LogicalScopeKind kind, int index) => kind switch
+	{
+		LogicalScopeKind.Row => $"linha {index + 1}",
+		LogicalScopeKind.Column => $"coluna {index + 1}",
+		LogicalScopeKind.Block => $"bloco {index + 1}",
+		_ => "região"
+	};
+
+	private static int PositionIndex(CellPosition position) => position.Row * 9 + position.Column;
+
+	private sealed record HintCalculation(string Title, string Formula, string Description);
 
 	public void Dispose()
 	{
