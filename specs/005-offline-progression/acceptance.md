@@ -34,6 +34,15 @@ Data da verificação: 2026-10-09.
 | Windows | 30, após 3 aquecimentos | 57,4 ms | Medido da invocação de uma entrada candidata via UI Automation até a árvore UIA observar as notas esperadas e o estado `Salvo.`. Mínimo 24,6 ms, mediana 30,6 ms, máximo 65,8 ms. A métrica inclui a observação UIA local e ficou abaixo do limite de 250 ms. |
 | Android | Não medido | — | Os fluxos de persistência foram exercitados no emulador, mas não foi coletada uma série cronometrada reproduzível para comparar ao limite de 250 ms. |
 
+## Revalidação manual após retomada — 2026-10-09
+
+- Android: numa sessão Easy, a célula 1,1 recebeu as notas 1 e 2. O estado visível passou a `Salvo.`; Desfazer removeu a nota 2 e Refazer a restaurou.
+- Android: após encerramento forçado e reabertura, a tela inicial ofereceu continuar a partida salva. Ao continuar, a célula 1,1 restaurou as notas 1 e 2 e o estado `Salvo.`.
+- Android: após enviar o app para segundo plano por 12 segundos e reabri-lo, o tempo ativo permaneceu em `00:01:21`.
+- Windows: com o aplicativo aberto, observei o tabuleiro 9×9 expandido e o estado de salvamento. Esta rodada não repetiu o ciclo de notas no Windows; permanece válida a evidência anterior registrada acima.
+
+Esta rodada não concluiu uma partida, não induziu falha de armazenamento na interface, não validou fala com Narrator/TalkBack e não mediu p95 Android. T028 permanece desmarcada.
+
 ## Pendências para T028
 
 T028 continua desmarcada. Para concluí-la, ainda é necessário validar uma partida concluída, falha de gravação na interface, fala/uso efetivo com Narrator e TalkBack e p95 de salvamento no Android. O serviço TalkBack do emulador estava desativado; não foi ativado durante esta rodada.
