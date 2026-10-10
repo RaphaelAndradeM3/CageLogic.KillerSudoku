@@ -195,3 +195,7 @@ Task: T022 Implement RuleOf45Technique in src/CageLogic.Domain/LogicalSteps/Tech
 
 - [X] T043 Tune the production cage partition strategy and add a bounded, fixed-seed end-to-end Expert fixture using the real `SudokuSolver` and `DifficultyAnalyzer`; assert successful generation, a unique solution, zero givens, and Expert classification, per US2/AC1, FR-006, and SC-003 (closes T040/T041).
 - [ ] T044 Select and document the minimum supported Android device/runtime, run the fixed Release generation corpus on Windows and that Android target, record stage/request latency and cancellation results, then set configurable production budgets from those measurements, per FR-011, SC-006, and the plan performance gate (still partial; carries T037/T042 forward).
+
+## Phase 8: Easy cage presentation
+
+- [X] T045 Replace the Easy-only singleton cage partition with connected groups of up to four cells; verify the real seeded Easy generator produces multi-cell cages and sums above 9, preserve balanced initial givens, and document the existing upper-left target rendering (FR-012–FR-013, SC-007–SC-008).

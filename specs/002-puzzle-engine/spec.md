@@ -51,6 +51,7 @@ O jogador escolhe uma dificuldade e recebe um puzzle Killer Sudoku que respeita 
 3. **Given** a geração em andamento, **When** o jogador cancela a solicitação, **Then** a operação termina sem bloquear a navegação nem publicar resultado parcial.
 4. **Given** que o limite configurado de geração seja esgotado sem encontrar um puzzle único classificado no nível solicitado, **When** o pedido termina, **Then** o motor retorna indisponibilidade explícita e não oferece um puzzle de outro nível.
 5. **Given** um puzzle Easy gerado é iniciado, **When** o tabuleiro aparece ao jogador, **Then** 27 dígitos corretos ficam fixos, distribuídos em três por linha, coluna e bloco 3×3; as outras 54 células começam vazias e a solução completa permanece separada.
+6. **Given** um puzzle Killer Sudoku Easy é iniciado, **When** o tabuleiro é desenhado, **Then** as células aparecem agrupadas em cages conectadas de 2 a 4 células sempre que a partição permitir, cada cage tem seu contorno e sua soma fica legível no canto superior esquerdo; Easy não deve ser particionado em 81 cages unitárias.
 
 ### Edge Cases
 
@@ -77,6 +78,7 @@ O jogador escolhe uma dificuldade e recebe um puzzle Killer Sudoku que respeita 
 - **FR-010**: O sistema MUST retornar indisponibilidade explícita com motivo, tentativas e tempo decorrido, sem puzzle parcial e sem substituir a dificuldade solicitada, quando o orçamento configurado for esgotado sem encontrar um puzzle elegível.
 - **FR-011**: Cada pedido MUST receber limites explícitos e positivos de tentativas e duração. A API da biblioteca não define valores padrão de produção antes das medições documentadas em Windows e no Android mínimo suportado.
 - **FR-012**: O sistema MUST iniciar puzzles Easy com exatamente 27 dígitos fixos provenientes da solução validada, distribuídos em três por linha, coluna e bloco 3×3; as demais células começam vazias e a solução completa permanece separada.
+- **FR-013**: O gerador MUST particionar puzzles Easy em cages conectadas com tamanhos variados de até quatro células, em vez de criar somente cages unitárias; o tabuleiro MUST desenhar o contorno de cada cage e exibir seu alvo de soma na célula superior esquerda da região.
 
 ### Rubrica de dificuldade — catálogo v1
 
@@ -124,6 +126,7 @@ A classificação mede o perfil menos avançado que completa uma trilha lógica 
 - **SC-005**: Ao esgotar o limite configurado sem encontrar um puzzle único classificado na dificuldade solicitada, o pedido retorna indisponibilidade sem publicar puzzle de outra dificuldade.
 - **SC-006**: Todo pedido de geração usa limites explícitos de tentativas e duração; nenhum padrão de produção é configurado antes de medir e documentar o pipeline nos dispositivos-alvo.
 - **SC-007**: Todo puzzle Easy é entregue com exatamente 27 dígitos fixos válidos, três em cada linha, coluna e bloco 3×3; as demais células ficam vazias e a solução completa permanece separada.
+- **SC-008**: O fixture Easy de geração real contém cages conectadas com múltiplas células e ao menos um alvo de soma maior que 9; na interface, o contorno e o alvo de cada cage permanecem visíveis.
 
 ## Assumptions
 

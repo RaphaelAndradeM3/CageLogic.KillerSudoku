@@ -41,14 +41,14 @@ public sealed class CagePartitionGenerator : ICagePartitionGenerator
         var cages = new List<CageDefinition>();
         var maximumSize = difficulty switch
         {
-            DifficultyLevel.Easy => 1,
+            DifficultyLevel.Easy => 4,
             DifficultyLevel.Medium => 3,
             DifficultyLevel.Hard => 4,
             _ => throw new ArgumentOutOfRangeException(nameof(difficulty))
         };
         var singletonProbability = difficulty switch
         {
-            DifficultyLevel.Easy => 1.0,
+            DifficultyLevel.Easy => 0.0,
             DifficultyLevel.Medium => 0.0,
             DifficultyLevel.Hard => 0.20,
             _ => throw new ArgumentOutOfRangeException(nameof(difficulty))

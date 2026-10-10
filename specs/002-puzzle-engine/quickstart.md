@@ -39,6 +39,10 @@ Implementar os cenários como fixtures NUnit nos projetos já existentes e confe
 | Orçamento esgotado | Limite de tentativas baixo ou limite de duração atingido antes do aceite | `Unavailable` com motivo, tentativas iniciadas e tempo decorrido; sem solução ou puzzle; a dificuldade pedida não muda. |
 | Cancelamento | Token cancelado antes e durante solver, análise e geração | Operação termina com `OperationCanceledException`; nenhum resultado parcial é publicado. |
 
+### Cages e alvos no tabuleiro
+
+Gerar um puzzle Easy com seed fixa e inspecionar `GeneratedPuzzle.Puzzle.Cages`: a partição deve conter regiões conectadas com mais de uma célula, cada alvo deve somar os dígitos correspondentes da solução e pelo menos um alvo deve ser maior que 9. Ao iniciar o puzzle, o tabuleiro MAUI desenha as bordas da cage e mostra o alvo no canto superior esquerdo da região.
+
 ## Execução focada
 
 Depois de definidos os nomes reais dos fixtures, executar cada projeto separadamente para encurtar o ciclo. Exemplo de comandos no estado atual da solution:
@@ -87,13 +91,13 @@ dotnet test tests/CageLogic.Application.Tests/CageLogic.Application.Tests.csproj
 
 Em 2026-10-05, o fixture Release foi executado no ambiente Windows 10 x64 (`10.0.19045`), SDK .NET `10.0.401` e runtime `10.0.12`, usando dez seeds fixas de dificuldade Easy (`20261001` a `20261010`). A latência total teve p50 de `160,55 ms`, p95 de `687,57 ms` e máximo de `687,57 ms`. Nas etapas, p50/p95/máximo foram: grade `0,03/4,02/4,02 ms`; cages `0,25/9,26/9,26 ms`; estrutura `0,51/16,45/16,45 ms`; unicidade `63,87/501,60/501,60 ms`; análise lógica `87,37/179,30/179,30 ms`. O cenário controlado de rejeição registrou três estruturas inválidas em três tentativas. A resposta observada ao token já cancelado foi `11,51 ms` neste processo; esse número não é um limite garantido.
 
-Os valores acima medem este ambiente compartilhado e puzzles Easy com cages singleton. Não definem orçamento de produção. O repositório ainda não contém host MAUI nem configuração de aparelho Android mínimo; workloads Android e MAUI Windows estão instalados, mas não há dispositivo Android selecionado/conectado. A API continua exigindo `GenerationBudget` explícito. Não configurar defaults até repetir o corpus em Windows de produto e no Android mínimo escolhido.
+Os valores acima medem este ambiente compartilhado e puzzles Easy com cages singleton, antes da atualização T045 para cages agrupadas. Eles não medem a estratégia atual nem definem orçamento de produção. Na medição de 2026-10-05, o host MAUI e um Android mínimo ainda não estavam configurados; a feature 004 adicionou o host posteriormente, e os builds atuais estão registrados abaixo. A API continua exigindo `GenerationBudget` explícito. Não configurar defaults até repetir o corpus em Windows de produto e no Android mínimo escolhido.
 
 Em 2026-10-06, o mesmo benchmark foi executado em Release no Windows 10 x64 (`10.0.19045.0`), SDK .NET `10.0.401` e runtime `10.0.12`. No corpus Easy, a latência total foi p50 `218,09 ms`, p95 `613,02 ms` e máxima `613,02 ms`; a etapa de unicidade teve p50 `13,21 ms`, p95 `95,93 ms` e máxima `95,93 ms`. O fixture Hard (`408863218`) levou `1.854,39 ms`, com unicidade em `12,72 ms` e análise de dificuldade em `1.836,43 ms`. O fixture Expert (`1597463005`) levou `146,87 ms`, com unicidade em `2,56 ms` e análise de dificuldade em `135,61 ms`. Hard e Expert são uma execução fixa cada, não uma distribuição p50/p95. Os tempos confirmam que a busca de unicidade não é o gargalo desses fixtures; a análise de dificuldade dominou o caso Hard. São medições deste host e não definem orçamento Android ou de produção.
 
 ## Builds de plataforma
 
-Hoje, `CageLogic.slnx` contém somente bibliotecas e testes `net10.0`; não há projeto host para targets de plataforma. Quando a feature 004 adicionar o host MAUI, executar no projeto host real:
+`CageLogic.slnx` contém as bibliotecas e os testes `net10.0`. O host MAUI da feature 004 está em `src/CageLogic.Maui/CageLogic.Maui.csproj`; executar nele:
 
 ```powershell
 dotnet build <caminho-do-host.csproj> --configuration Release -f net10.0-windows10.0.19041.0
@@ -103,3 +107,5 @@ dotnet build <caminho-do-host.csproj> --configuration Release -f net10.0-android
 ## Validação executada
 
 Em 2026-10-06, `dotnet build CageLogic.slnx --configuration Release --warnaserror --no-restore` concluiu com 0 warnings e 0 erros; `dotnet test CageLogic.slnx --no-build --no-restore --configuration Release` aprovou 78 testes (34 Domain e 44 Application). O benchmark opt-in não foi executado nesta validação. O restore de dependências de teste exigiu `dotnet restore CageLogic.slnx --source https://api.nuget.org/v3/index.json` neste ambiente porque o feed privado configurado rejeitou a credencial local.
+
+Em 2026-10-09, após a alteração T045, `dotnet build CageLogic.slnx --configuration Release --warnaserror --no-restore` concluiu sem erros; `dotnet test CageLogic.slnx --no-build --no-restore --configuration Release` aprovou 183 testes (38 Domain, 125 Application e 20 Infrastructure). O build MAUI Release para Windows passou com 0 avisos e erros usando uma saída temporária, pois o app estava aberto. O build MAUI Release Android passou com 0 avisos e erros usando `-p:AndroidLinkMode=None -p:RunAOTCompilation=false`. A aceitação visual manual e as medições de geração com cages agrupadas continuam pendentes.

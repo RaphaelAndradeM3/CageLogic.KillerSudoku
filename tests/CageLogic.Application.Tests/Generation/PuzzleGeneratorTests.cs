@@ -29,6 +29,11 @@ public sealed class PuzzleGeneratorTests
                 .GroupBy(position => (position.Row / 3, position.Column / 3))
                 .Select(group => group.Count()),
             Is.All.EqualTo(3));
+        Assert.That(generated.Puzzle.Cages.Any(cage => cage.Positions.Count > 1), Is.True,
+            "Easy must show connected multi-cell cages with their sum targets.");
+        Assert.That(generated.Puzzle.Cages.Any(cage => cage.TargetSum > 9), Is.True,
+            "Easy must include cage targets that represent sums, not only single-cell digits.");
+        Assert.That(generated.Puzzle.Cages.All(cage => cage.Positions.Count <= 4), Is.True);
         Assert.That(generated.Difficulty.Level, Is.EqualTo(DifficultyLevel.Easy));
         Assert.That(generated.Attempts, Is.EqualTo(1));
         Assert.That(new SudokuBoardValidator().Validate(generated.Solution.ToBoard(generated.Puzzle)).IsSolved, Is.True);
@@ -255,6 +260,14 @@ public sealed class PuzzleGeneratorTests
             solution[position.Row * 9 + position.Column])), Is.True);
         Assert.That(cages.All(cage => cage.Positions.Select(position =>
             solution[position.Row * 9 + position.Column]).Distinct().Count() == cage.Positions.Count), Is.True);
+        if (level == DifficultyLevel.Easy)
+        {
+            Assert.That(cages.Any(cage => cage.Positions.Count > 1), Is.True,
+                "Easy partitions must contain connected multi-cell cages.");
+            Assert.That(cages.Any(cage => cage.TargetSum > 9), Is.True,
+                "Easy partitions must include visible arithmetic cage targets.");
+            Assert.That(cages.All(cage => cage.Positions.Count <= 4), Is.True);
+        }
     }
 
     [Test]
