@@ -461,7 +461,14 @@ public sealed class GameSession
 			_conflictingPositions.Contains(cell.Position),
 			_notes.For(cell.Position),
 			hintRoles.Where(role => role.Value.Contains(cell.Position)).Select(role => role.Key)));
-		var cages = _board.Cages.Select(cage => new GameSessionCageViewState(cage.TargetSum, cage.Positions));
+		var cages = _board.Cages.Select(cage =>
+		{
+			var values = cage.Positions.Select(position => _board.GetCell(position).CurrentValue).ToArray();
+			var isSatisfied = values.All(static value => value.HasValue)
+				&& values.Select(static value => value.GetValueOrDefault()).Distinct().Count() == values.Length
+				&& values.Sum(static value => value.GetValueOrDefault()) == cage.TargetSum;
+			return new GameSessionCageViewState(cage.TargetSum, cage.Positions, isSatisfied);
+		});
 		return new GameSessionViewState(
 			_generatedPuzzle.RequestedDifficulty,
 			_selectedPosition,

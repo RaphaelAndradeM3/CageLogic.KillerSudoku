@@ -40,6 +40,10 @@ public sealed class KillerSudokuBoardDrawable : IDrawable
 	private static void DrawCellValuesAndSelection(ICanvas canvas, BoardGeometry geometry, GameSessionViewState viewState, bool isDarkTheme)
 	{
 		var selectedPosition = viewState.Cells.FirstOrDefault(static cell => cell.IsSelected)?.Position;
+		var satisfiedCagePositions = viewState.Cages
+			.Where(static cage => cage.IsSatisfied)
+			.SelectMany(static cage => cage.Positions)
+			.ToHashSet();
 
 		foreach (var cell in viewState.Cells)
 		{
@@ -52,6 +56,11 @@ public sealed class KillerSudokuBoardDrawable : IDrawable
 			else if (cell.IsSelected)
 			{
 				canvas.FillColor = isDarkTheme ? Color.FromArgb("#2A4B67") : Color.FromArgb("#DFECFA");
+				canvas.FillRectangle(bounds);
+			}
+			else if (satisfiedCagePositions.Contains(cell.Position))
+			{
+				canvas.FillColor = isDarkTheme ? Color.FromArgb("#244D73") : Color.FromArgb("#C5DDF4");
 				canvas.FillRectangle(bounds);
 			}
 			else if (selectedPosition is { } selected && SharesSelectedRegion(cell.Position, selected))
