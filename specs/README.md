@@ -18,7 +18,7 @@ Multiplayer, login, nuvem, anúncios, monetização, iOS e publicação em lojas
 
 ## Limites de arquitetura e desenvolvimento
 
-- Ler esta documentação e a constituição do projeto antes de implementar. Preservar a versão .NET 10 planejada, nullable e convenções presentes quando os projetos forem criados.
+- Ler esta documentação e a constituição do projeto antes de implementar. Preservar .NET 10, nullable e as convenções estabelecidas nos projetos existentes.
 - Manter as regras do jogo independentes de MAUI, SQLite, Android, Windows e detalhes de infraestrutura. Dependências apontam para o domínio; ViewModels coordenam interface e não implementam regras, candidatos, solver ou geração.
 - Criar interfaces apenas para fronteiras, substituição em testes ou variabilidade real. Usar injeção por construtor. Quando houver composition root real, registrar nela as dependências criadas ou alteradas na fatia que primeiro as integra ao host. Se uma biblioteca for implementada antes de existir host/composition root, não criar um host ou composition root artificial; documentar a dependência pendente e registrá-la na primeira fatia consumidora que possa usar a composition root real.
 - Usar async de ponta a ponta para I/O e operações longas; aceitar CancellationToken onde operações demoradas possam ser canceladas. Não usar .Result ou .Wait().
@@ -35,5 +35,5 @@ Multiplayer, login, nuvem, anúncios, monetização, iOS e publicação em lojas
 - Quando existir solution, executar dotnet build --configuration Release --warnaserror e, após build bem-sucedido, dotnet test --no-build --configuration Release.
 - Executar builds dos targets Windows e Android após workloads serem configurados. Rodar testes focados e a suíte existente conforme projetos e convenções reais.
 - Usar filtro Category=Integration somente se a categoria for configurada no projeto. WebApplicationFactory não é pressuposto para um aplicativo MAUI offline.
-- `CageLogic.slnx`, as bibliotecas `CageLogic.Domain` e `CageLogic.Application` e os projetos NUnit de teste já existem em .NET 10. Eles cobrem a base implementada em 001; o host MAUI e os targets Windows/Android ainda não existem.
-- Os gates `dotnet build CageLogic.slnx --configuration Release --warnaserror` e, após sucesso, `dotnet test CageLogic.slnx --no-build --configuration Release` aplicam-se à solution atual. A atualização destes documentos não executou esses comandos.
+- `CageLogic.slnx` contém os projetos Domain, Application, Infrastructure, o host MAUI em `src/CageLogic.Maui/CageLogic.Maui.csproj` e os três projetos NUnit de teste. Os targets MAUI são Windows e Android; a máquina precisa dos workloads e SDKs correspondentes.
+- Os gates `dotnet build CageLogic.slnx --configuration Release --warnaserror` e, após sucesso, `dotnet test CageLogic.slnx --no-build --configuration Release` aplicam-se à solution atual. Os resultados mais recentes estão em [005-offline-progression/acceptance.md](005-offline-progression/acceptance.md); cada quickstart preserva o histórico da respectiva feature.

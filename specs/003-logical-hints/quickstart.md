@@ -4,7 +4,7 @@
 
 - .NET SDK 10 instalado.
 - Executar os comandos a partir da raiz do repositório.
-- Solution `CageLogic.slnx` e projetos NUnit atuais. Não há host MAUI nesta feature; não são necessários workloads Windows/Android para os gates de 003.
+- Solution `CageLogic.slnx` e projetos NUnit atuais. A feature 003 valida bibliotecas e não exige workloads MAUI; o host criado na feature 004 está em `src/CageLogic.Maui/CageLogic.Maui.csproj`.
 
 ## Implementar e validar o fluxo
 
@@ -53,4 +53,4 @@ Executar o segundo comando apenas se o build concluir com sucesso. Os comandos a
 
 O conjunto mensurável do SC-002 é fechado nos nove vetores LH-01 a LH-09. Cada teste confere o ID, o efeito, os destaques, os dígitos, os pares posição/dígito e o escopo com seu vetor; nome e explicação em português correspondem à técnica e ao nível pedidos.
 
-Build visual dos targets Windows/Android e teste de sessão na interface ficam para 004, depois que o host MAUI e workloads estiverem configurados.
+O host MAUI e os targets Windows/Android foram adicionados na feature 004. A aceitação visual e de sessão correspondente está registrada em [004-game-session/quickstart.md](../004-game-session/quickstart.md); parte da matriz manual permanece pendente conforme aquele registro.

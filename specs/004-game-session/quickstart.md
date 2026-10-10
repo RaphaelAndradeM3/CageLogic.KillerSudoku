@@ -7,7 +7,7 @@
 - Emulador ou dispositivo Android e ambiente Windows para validação manual dos dois alvos.
 - Restaurar dependências NuGet antes do primeiro build.
 
-Os workloads do host MAUI ainda não fazem parte da solution na etapa de planejamento. Os comandos abaixo são gates para depois da implementação; não foram executados ao criar este plano.
+O host MAUI foi implementado em `src/CageLogic.Maui/CageLogic.Maui.csproj` e faz parte da solution atual. Os comandos abaixo são gates reproduzíveis; os resultados históricos e as limitações da aceitação manual estão registrados nesta página e em [005-offline-progression/acceptance.md](../005-offline-progression/acceptance.md).
 
 ## Build e testes automatizados
 
