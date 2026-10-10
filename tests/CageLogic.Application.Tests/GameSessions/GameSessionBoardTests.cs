@@ -25,6 +25,19 @@ public sealed class GameSessionBoardTests
 	}
 
 	[Test]
+	public void CreateFromGeneratedPuzzle_ProjectsInitialGivensAsFixedCells()
+	{
+		var generatedPuzzle = GameSessionTestData.CreateGeneratedPuzzle(includeInitialGivens: true);
+		var session = new GameSession(generatedPuzzle);
+		var givens = session.ViewState.Cells.Where(cell => cell.IsGiven).ToArray();
+
+		Assert.That(givens, Has.Length.EqualTo(27));
+		Assert.That(givens.All(cell =>
+			cell.Value == generatedPuzzle.Solution.GetValue(cell.Position) && !cell.IsEditable), Is.True);
+		Assert.That(session.ViewState.Cells.Count(cell => cell.Value is null), Is.EqualTo(54));
+	}
+
+	[Test]
 	public void SelectCell_ChangesSelectionWithoutChangingBoardValues()
 	{
 		var session = new GameSession(CreateGeneratedPuzzle());

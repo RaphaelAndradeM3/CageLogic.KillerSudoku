@@ -18,7 +18,7 @@ description: "Task list for the Killer Sudoku puzzle engine feature"
 
 - [X] T001 Reconcile `README.md`, `specs/README.md`, the feature specs/checklists and `specs/002-puzzle-engine/spec.md` with the existing `CageLogic.slnx`, Domain/Application projects, NUnit projects, and available .NET 10 Release build/test gates.
 - [X] T002 Record the normative cumulative Easy/Medium/Hard/Expert technique sets, catalog version 1, deterministic tie-break, and “lowest profile that completes a full logical trace” rule in `specs/002-puzzle-engine/spec.md` and align `specs/002-puzzle-engine/plan.md`.
-- [X] T003 Define generated MVP puzzles as having zero given digits in `specs/002-puzzle-engine/spec.md` and `specs/002-puzzle-engine/data-model.md`; keep the full solution separate from the player-visible cage clues.
+- [X] T003 Define the Easy starting clue policy as 27 balanced values sourced from the validated solution in `specs/002-puzzle-engine/spec.md` and `data-model.md`; keep the remaining cells empty and the full solution separate.
 - [X] T004 Align `specs/002-puzzle-engine/spec.md` and `specs/002-puzzle-engine/data-model.md` on positive, explicit attempt/time budgets, `Unavailable` versus caller cancellation, and production defaults only after target-device measurements.
 
 ---
@@ -65,7 +65,7 @@ description: "Task list for the Killer Sudoku puzzle engine feature"
 
 - [X] T013 [P] [US2] Add Domain fixtures for Naked Single, Hidden Single, Cage Single, Cage Combination, Cage/Region Intersection, Rule of 45, Naked Pair, Hidden Pair, and Naked Triple, asserting each stable technique ID and logical deduction in `tests/CageLogic.Domain.Tests/LogicalSteps/LogicalTechniqueTests.cs`; run them to establish the failing baseline.
 - [X] T014 [P] [US2] Add Application fixtures for all four cumulative profiles, tier boundaries, deterministic technique tie-breaking, candidate-elimination persistence across placements, complete-trace requirement, and `Unclassifiable` in `tests/CageLogic.Application.Tests/Difficulty/DifficultyAnalyzerTests.cs`; run them to establish the failing baseline.
-- [X] T015 [P] [US2] Add seeded generation fixtures for valid unique puzzles with zero givens at each requested level, replay determinism, rejected candidates, attempt/time exhaustion without fallback, and cancellation without partial publication in `tests/CageLogic.Application.Tests/Generation/PuzzleGeneratorTests.cs`; run them to establish the failing baseline.
+- [X] T015 [P] [US2] Add seeded generation fixtures for unique puzzles, 27 balanced Easy givens, zero givens for the other requested levels, replay determinism, rejected candidates, budget exhaustion, and cancellation in `tests/CageLogic.Application.Tests/Generation/PuzzleGeneratorTests.cs`.
 
 ### Implementation for User Story 2
 
@@ -87,7 +87,7 @@ description: "Task list for the Killer Sudoku puzzle engine feature"
 - [X] T031 [US2] Add `PuzzleGenerationResult` and `UnavailableReason` in `src/CageLogic.Application/Generation/PuzzleGenerationResult.cs` after T030; model only success with a complete `GeneratedPuzzle` or unavailable with reason/attempts/elapsed, never a partial puzzle.
 - [X] T032 [US2] Implement seeded full-grid creation in `src/CageLogic.Application/Generation/SolvedGridGenerator.cs` using Sudoku constraints, deterministic cell/value ordering for equal seed and runtime version, and cooperative cancellation.
 - [X] T033 [US2] Implement cage partition creation in `src/CageLogic.Application/Generation/CagePartitionGenerator.cs` that covers all 81 cells once with orthogonally connected cages, never repeats a solution digit within a cage, derives each target from the known solution, and observes the seed and cancellation token.
-- [X] T034 [US2] Implement the retry/accept pipeline in `src/CageLogic.Application/Generation/PuzzleGenerator.cs`: create `PuzzleDefinition` with zero given values, validate through `PuzzleStructureValidator`, require solver multiplicity `Unique`, require the requested difficulty profile, discard every rejected candidate, and return `Unavailable` with reason/attempts/elapsed at either budget limit without fallback; use internal deadline cancellation distinct from caller cancellation, with caller cancellation taking precedence.
+- [X] T034 [US2] Implement the retry/accept pipeline in `src/CageLogic.Application/Generation/PuzzleGenerator.cs`: create a `PuzzleDefinition` with the Easy starting-given policy, validate through `PuzzleStructureValidator`, require a unique solution and the requested difficulty profile, discard rejected candidates, and return `Unavailable` with reason/attempts/elapsed at either budget limit without fallback; caller cancellation takes precedence.
 - [X] T035 [US2] Add `GeneratePuzzleUseCase` in `src/CageLogic.Application/Generation/GeneratePuzzleUseCase.cs` that runs generation away from the UI thread with `Task.Run`, passes cancellation through every stage, propagates caller cancellation separately from an internal time-budget deadline, and publishes only a complete success result.
 - [X] T040 [US2] Tune the production cage partitioner and add a seeded end-to-end Expert generation fixture using the real `PuzzleSolver` and `DifficultyAnalyzer`; the current Expert test injects the analyzer and does not prove that the default pipeline can produce an Expert puzzle.
 

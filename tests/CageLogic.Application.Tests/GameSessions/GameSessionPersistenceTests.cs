@@ -88,6 +88,20 @@ public sealed class GameSessionPersistenceTests
 		Assert.Throws<InvalidDataException>(() => mapper.Restore(snapshot with { ErrorCount = -1 }));
 	}
 
+	[Test]
+	public void CaptureAndRestore_PreservesEasyStartingGivens()
+	{
+		var generatedPuzzle = GameSessionTestData.CreateGeneratedPuzzle(includeInitialGivens: true);
+		var session = new GameSession(generatedPuzzle);
+		var mapper = new GameSessionPersistenceMapper();
+
+		var restored = mapper.Restore(mapper.Deserialize(mapper.Serialize(mapper.Capture(session))));
+
+		Assert.That(restored.ViewState.Cells.Count(cell => cell.IsGiven), Is.EqualTo(27));
+		Assert.That(restored.ViewState.Cells.Where(cell => cell.IsGiven).All(cell =>
+			cell.Value == generatedPuzzle.Solution.GetValue(cell.Position)), Is.True);
+	}
+
 	private sealed class ManualTimeProvider : TimeProvider
 	{
 		private long _timestamp;

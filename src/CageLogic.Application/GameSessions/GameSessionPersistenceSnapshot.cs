@@ -188,9 +188,7 @@ public sealed class GameSessionPersistenceMapper
 		var validation = new PuzzleStructureValidator().Validate(new PuzzleDefinition(givens, cages));
 		if (!validation.IsValid)
 			throw new InvalidDataException("The saved puzzle definition is structurally invalid.");
-		if (validation.Puzzle!.Givens.Count != 0)
-			throw new InvalidDataException("Generated game sessions cannot contain fixed givens.");
-		return validation.Puzzle;
+		return validation.Puzzle!;
 	}
 
 	private static SudokuBoard RestoreBoard(

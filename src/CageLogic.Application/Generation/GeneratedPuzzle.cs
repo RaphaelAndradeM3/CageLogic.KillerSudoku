@@ -25,11 +25,6 @@ public sealed class GeneratedPuzzle
             throw new ArgumentOutOfRangeException(nameof(requestedDifficulty));
         }
 
-        if (puzzle.Givens.Count != 0)
-        {
-            throw new ArgumentException("Generated puzzles must contain no given values.", nameof(puzzle));
-        }
-
         if (!difficulty.IsClassified || difficulty.Level != requestedDifficulty)
         {
             throw new ArgumentException("The difficulty analysis must match the requested level.", nameof(difficulty));

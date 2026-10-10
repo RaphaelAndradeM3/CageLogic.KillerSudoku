@@ -28,7 +28,7 @@ Implementar os cenários como fixtures NUnit nos projetos já existentes e confe
 | Cenário | Execução | Resultado esperado |
 |---|---|---|
 | Puzzle estruturalmente inválido | `PuzzleStructureValidator.Validate` com cage desconectada, cobertura incorreta ou alvo inviável | `PuzzleStructureResult` inválido; o solver não recebe `ValidatedPuzzle` inexistente. |
-| Puzzle gerado sem dígitos iniciais | Inspecionar um resultado `Success` antes de iniciar a partida | As 81 células iniciais estão vazias; os alvos/cages são as pistas visíveis e a `SolutionGrid` fica separada. |
+| Pistas iniciais de Easy | Inspecionar um resultado `Success` antes de iniciar a partida | 27 células mostram valores fixos válidos, três por linha, coluna e bloco 3×3; as outras 54 permanecem vazias e a `SolutionGrid` fica separada. |
 | Zero soluções | Puzzle estruturalmente válido com givens que conflitam | `SolutionSearchResult.NoSolution`, sem solução parcial. |
 | Uma solução | Fixture conhecida e válida | `Unique`, primeira solução completa passa validação de linhas, colunas, blocos e cages. |
 | Múltiplas soluções | Fixture ambígua | `Multiple` após a segunda solução; não afirmar contagem exata acima de 2. |
