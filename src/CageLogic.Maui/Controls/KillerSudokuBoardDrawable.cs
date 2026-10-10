@@ -39,6 +39,8 @@ public sealed class KillerSudokuBoardDrawable : IDrawable
 
 	private static void DrawCellValuesAndSelection(ICanvas canvas, BoardGeometry geometry, GameSessionViewState viewState, bool isDarkTheme)
 	{
+		var selectedPosition = viewState.Cells.FirstOrDefault(static cell => cell.IsSelected)?.Position;
+
 		foreach (var cell in viewState.Cells)
 		{
 			var bounds = geometry.GetCellBounds(cell.Position);
@@ -50,6 +52,11 @@ public sealed class KillerSudokuBoardDrawable : IDrawable
 			else if (cell.IsSelected)
 			{
 				canvas.FillColor = isDarkTheme ? Color.FromArgb("#2A4B67") : Color.FromArgb("#DFECFA");
+				canvas.FillRectangle(bounds);
+			}
+			else if (selectedPosition is { } selected && SharesSelectedRegion(cell.Position, selected))
+			{
+				canvas.FillColor = isDarkTheme ? Color.FromArgb("#293747") : Color.FromArgb("#EEF4FA");
 				canvas.FillRectangle(bounds);
 			}
 			DrawHintRoles(canvas, bounds, geometry.CellSize, cell);
@@ -67,6 +74,16 @@ public sealed class KillerSudokuBoardDrawable : IDrawable
 
 			DrawNotes(canvas, bounds, geometry.CellSize, cell.Notes, isDarkTheme);
 		}
+	}
+
+	private static bool SharesSelectedRegion(CellPosition position, CellPosition selected)
+	{
+		var sharesBlock = position.Row / 3 == selected.Row / 3
+			&& position.Column / 3 == selected.Column / 3;
+
+		return position.Row == selected.Row
+			|| position.Column == selected.Column
+			|| sharesBlock;
 	}
 
 	private static void DrawNotes(ICanvas canvas, RectF bounds, float cellSize, IReadOnlyList<int> notes, bool isDarkTheme)
