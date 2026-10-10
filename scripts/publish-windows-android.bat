@@ -1,14 +1,18 @@
 @echo off
 setlocal
 
-rem Publishes the unpackaged Windows app and a signed Android APK.
-rem Keep the Android keystore and password files outside the repository.
+rem Publishes the unpackaged Windows app and a locally signed Android APK.
+rem The Android signing identity is created once under LOCALAPPDATA and reused.
 
 for %%I in ("%~dp0..") do set "ROOT=%%~fI"
 set "PROJECT=%ROOT%\src\CageLogic.Maui\CageLogic.Maui.csproj"
 set "PUBLISH_ROOT=%ROOT%\artifacts\publish"
 set "WINDOWS_OUT=%PUBLISH_ROOT%\windows"
 set "ANDROID_OUT=%PUBLISH_ROOT%\android"
+set "SIGNING_DIR=%LOCALAPPDATA%\CageLogic\KillerSudoku\signing"
+set "KEYSTORE=%SIGNING_DIR%\cagelogic-local-release.p12"
+set "PASSWORD_FILE=%SIGNING_DIR%\keystore-password.txt"
+set "CAGELOGIC_SIGNING_PASSWORD_FILE=%PASSWORD_FILE%"
 
 where dotnet >nul 2>&1
 if errorlevel 1 (
@@ -36,54 +40,8 @@ dotnet publish "%PROJECT%" -f net10.0-windows10.0.19041.0 -c Release -p:RuntimeI
 if errorlevel 1 goto publish_failed
 
 echo.
-echo Assinatura do APK Android
-echo Informe os caminhos para o keystore e para arquivos de texto com as senhas.
-echo Digite os caminhos sem aspas; o script adiciona as aspas automaticamente.
-echo Os arquivos de senha devem conter somente a senha e ficar fora do repositorio.
-echo Se a senha da chave e a senha do keystore forem iguais, informe o mesmo arquivo.
-echo.
-
-set "KEYSTORE="
-set /p "KEYSTORE=Caminho do keystore (.jks/.keystore): "
-if not defined KEYSTORE (
-    echo ERRO: o caminho do keystore e obrigatorio.
-    exit /b 1
-)
-if not exist "%KEYSTORE%" (
-    echo ERRO: keystore nao encontrado: "%KEYSTORE%"
-    echo Crie e guarde um keystore persistente; nao gere outro a cada publicacao.
-    echo Exemplo: keytool -genkeypair -v -keystore "%%USERPROFILE%%\CageLogicSigning\cagelogic.keystore" -alias cagelogic -keyalg RSA -keysize 2048 -validity 10000
-    exit /b 1
-)
-
-set "KEY_ALIAS="
-set /p "KEY_ALIAS=Alias da chave: "
-if not defined KEY_ALIAS (
-    echo ERRO: o alias da chave e obrigatorio.
-    exit /b 1
-)
-
-set "STORE_PASS_FILE="
-set /p "STORE_PASS_FILE=Arquivo com a senha do keystore: "
-if not defined STORE_PASS_FILE (
-    echo ERRO: informe o arquivo da senha do keystore.
-    exit /b 1
-)
-if not exist "%STORE_PASS_FILE%" (
-    echo ERRO: arquivo de senha nao encontrado: "%STORE_PASS_FILE%"
-    exit /b 1
-)
-
-set "KEY_PASS_FILE="
-set /p "KEY_PASS_FILE=Arquivo com a senha da chave: "
-if not defined KEY_PASS_FILE (
-    echo ERRO: informe o arquivo da senha da chave.
-    exit /b 1
-)
-if not exist "%KEY_PASS_FILE%" (
-    echo ERRO: arquivo de senha nao encontrado: "%KEY_PASS_FILE%"
-    exit /b 1
-)
+call :prepare_android_signing
+if errorlevel 1 goto publish_failed
 
 echo.
 echo [2/2] Publicando APK Android assinado...
@@ -92,7 +50,7 @@ if exist "%ANDROID_OUT%\*.apk" (
     echo ERRO: nao foi possivel remover APKs antigos de "%ANDROID_OUT%".
     exit /b 1
 )
-dotnet publish "%PROJECT%" -f net10.0-android -c Release -p:AndroidKeyStore=true -p:AndroidPackageFormats=apk "-p:AndroidSigningKeyStore=%KEYSTORE%" "-p:AndroidSigningKeyAlias=%KEY_ALIAS%" "-p:AndroidSigningStorePass=file:%STORE_PASS_FILE%" "-p:AndroidSigningKeyPass=file:%KEY_PASS_FILE%" "-p:PublishDir=%ANDROID_OUT%"
+dotnet publish "%PROJECT%" -f net10.0-android -c Release -p:AndroidKeyStore=true -p:AndroidPackageFormats=apk "-p:AndroidSigningKeyStore=%KEYSTORE%" -p:AndroidSigningKeyAlias=cagelogic "-p:AndroidSigningStorePass=file:%PASSWORD_FILE%" "-p:AndroidSigningKeyPass=file:%PASSWORD_FILE%" "-p:PublishDir=%ANDROID_OUT%"
 if errorlevel 1 goto publish_failed
 
 set "APK_FOUND="
@@ -106,7 +64,54 @@ echo.
 echo Publicacao concluida.
 echo Windows: "%WINDOWS_OUT%"
 echo APK Android assinado: "%APK_FOUND%"
+echo Chave de assinatura local mantida em: "%SIGNING_DIR%"
 echo Copie o APK para o celular e autorize a instalacao dessa origem, se solicitado.
+exit /b 0
+
+:prepare_android_signing
+if not defined LOCALAPPDATA (
+    echo ERRO: a variavel LOCALAPPDATA nao esta definida.
+    exit /b 1
+)
+
+if not exist "%SIGNING_DIR%" mkdir "%SIGNING_DIR%"
+if errorlevel 1 (
+    echo ERRO: nao foi possivel criar a pasta local de assinatura: "%SIGNING_DIR%".
+    exit /b 1
+)
+
+if exist "%KEYSTORE%" if not exist "%PASSWORD_FILE%" (
+    echo ERRO: a chave local existe, mas o arquivo de senha foi removido.
+    echo Restaure a pasta de assinatura de um backup; nao sera criada outra chave automaticamente.
+    exit /b 1
+)
+
+set "KEYTOOL="
+for /f "delims=" %%K in ('where.exe keytool.exe 2^>nul') do if not defined KEYTOOL set "KEYTOOL=%%K"
+if not defined KEYTOOL if defined JAVA_HOME if exist "%JAVA_HOME%\bin\keytool.exe" set "KEYTOOL=%JAVA_HOME%\bin\keytool.exe"
+if not defined KEYTOOL for /d %%J in ("%ProgramFiles(x86)%\Android\openjdk\jdk-*") do if exist "%%~fJ\bin\keytool.exe" set "KEYTOOL=%%~fJ\bin\keytool.exe"
+if not defined KEYTOOL (
+    echo ERRO: keytool nao encontrado. Instale/configure o JDK usado pelo workload Android.
+    exit /b 1
+)
+
+if not exist "%PASSWORD_FILE%" (
+    echo Criando identidade local de assinatura Android pela primeira vez...
+    powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command "$bytes = New-Object byte[] 48; $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create(); $rng.GetBytes($bytes); [System.IO.File]::WriteAllText($env:CAGELOGIC_SIGNING_PASSWORD_FILE, [Convert]::ToBase64String($bytes), [System.Text.Encoding]::ASCII)"
+    if errorlevel 1 (
+        echo ERRO: nao foi possivel gerar a senha local de assinatura.
+        exit /b 1
+    )
+)
+
+if not exist "%KEYSTORE%" (
+    "%KEYTOOL%" -genkeypair -noprompt -v -keystore "%KEYSTORE%" -storetype PKCS12 -alias cagelogic -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=CageLogic Local Signing,O=CageLogic,C=BR" -storepass:file "%PASSWORD_FILE%" -keypass:file "%PASSWORD_FILE%"
+    if errorlevel 1 (
+        echo ERRO: nao foi possivel criar o keystore Android local.
+        exit /b 1
+    )
+)
+
 exit /b 0
 
 :publish_failed
