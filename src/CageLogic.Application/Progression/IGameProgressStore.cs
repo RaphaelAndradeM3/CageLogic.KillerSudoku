@@ -23,7 +23,14 @@ public interface IGameProgressStore
 
 	/// <summary>Moves an unreadable active row to history after the player explicitly confirms replacement.</summary>
 	Task<GameProgressWriteResult> AbandonUnrecoverableActiveAsync(
-		Guid sessionId,
+		string sessionKey,
+		DateTimeOffset abandonedAtUtc,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>Replaces an active row atomically so a failed new-game save cannot discard the old game.</summary>
+	Task<GameProgressWriteResult> ReplaceActiveAsync(
+		SavedGameSession replacement,
+		string? replacedSessionKey,
 		DateTimeOffset abandonedAtUtc,
 		CancellationToken cancellationToken = default);
 

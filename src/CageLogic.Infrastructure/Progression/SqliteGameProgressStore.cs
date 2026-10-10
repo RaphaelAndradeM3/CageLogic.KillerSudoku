@@ -17,6 +17,8 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 	private static readonly GameSessionPersistenceMapper SnapshotMapper = new();
 	private readonly SqliteConnectionFactory _connectionFactory;
 	private readonly ILogger<SqliteGameProgressStore> _logger;
+	private readonly object _schemaMigrationLock = new();
+	private bool _schemaMigrated;
 
 	public SqliteGameProgressStore(
 		SqliteConnectionFactory connectionFactory,
@@ -51,10 +53,20 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 		RunInBackground(() => TransitionToTerminal(abandonedRecord, GameProgressStatus.Abandoned), cancellationToken);
 
 	public Task<GameProgressWriteResult> AbandonUnrecoverableActiveAsync(
-		Guid sessionId,
+		string sessionKey,
+		DateTimeOffset abandonedAtUtc,
+		CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(sessionKey);
+		return RunInBackground(() => AbandonUnrecoverableActive(sessionKey, abandonedAtUtc), cancellationToken);
+	}
+
+	public Task<GameProgressWriteResult> ReplaceActiveAsync(
+		SavedGameSession replacement,
+		string? replacedSessionKey,
 		DateTimeOffset abandonedAtUtc,
 		CancellationToken cancellationToken = default) =>
-		RunInBackground(() => AbandonUnrecoverableActive(sessionId, abandonedAtUtc), cancellationToken);
+		RunInBackground(() => ReplaceActive(replacement, replacedSessionKey, abandonedAtUtc), cancellationToken);
 
 	public Task<IReadOnlyList<GameProgressRecord>> GetRecordsAsync(CancellationToken cancellationToken = default) =>
 		RunInBackground(GetRecords, cancellationToken);
@@ -107,7 +119,7 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 		catch (SqliteException exception)
 		{
 			LogWriteFailure("Create", session.SessionId, exception);
-			return exception.SqliteErrorCode is 19 or 2067
+			return IsUniqueConstraintViolation(exception)
 				? GameProgressWriteResult.Conflict("ActiveSessionAlreadyExists")
 				: GameProgressWriteResult.Failed("DatabaseWriteFailed");
 		}
@@ -122,14 +134,36 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 		if (!reader.Read())
 			return GameProgressLoadResult.NoActiveSession();
 
-		var record = ReadRecord(reader);
-		if (reader.IsDBNull(9) || reader.IsDBNull(10))
-			return RecoveryRequired(record, "ActiveSnapshotMissing");
+		var recoverySessionKey = reader.GetString(0);
+		GameProgressRecord record;
+		try
+		{
+			record = ReadRecord(reader);
+		}
+		catch (Exception exception) when (IsInvalidPersistedRecord(exception))
+		{
+			_logger.LogWarning(exception,
+				"Active game progress row {SessionKey} contains invalid persisted fields.",
+				recoverySessionKey);
+			return RecoveryRequired(null, "ActiveRecordInvalid", recoverySessionKey);
+		}
 
-		var snapshotVersion = reader.GetInt32(9);
-		var snapshotJson = reader.GetString(10);
+		if (reader.IsDBNull(9) || reader.IsDBNull(10))
+			return RecoveryRequired(record, "ActiveSnapshotMissing", recoverySessionKey);
+
+		int snapshotVersion;
+		string snapshotJson;
+		try
+		{
+			snapshotVersion = reader.GetInt32(9);
+			snapshotJson = reader.GetString(10);
+		}
+		catch (Exception exception) when (IsInvalidPersistedRecord(exception))
+		{
+			return RecoveryRequired(record, "ActiveSnapshotInvalid", recoverySessionKey);
+		}
 		if (snapshotVersion != GameSessionPersistenceSnapshot.CurrentVersion)
-			return RecoveryRequired(record, "SnapshotVersionUnsupported");
+			return RecoveryRequired(record, "SnapshotVersionUnsupported", recoverySessionKey);
 
 		try
 		{
@@ -139,10 +173,66 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 		}
 		catch (InvalidDataException)
 		{
-			return RecoveryRequired(record, "SnapshotFormatInvalid");
+			return RecoveryRequired(record, "SnapshotFormatInvalid", recoverySessionKey);
 		}
 
 		return GameProgressLoadResult.Loaded(new SavedGameSession(record, snapshotVersion, snapshotJson));
+	}
+
+	private GameProgressWriteResult ReplaceActive(
+		SavedGameSession replacement,
+		string? replacedSessionKey,
+		DateTimeOffset abandonedAtUtc)
+	{
+		if (!IsValidActiveSession(replacement, out var reason))
+			return GameProgressWriteResult.Failed(reason);
+		if (abandonedAtUtc.Offset != TimeSpan.Zero)
+			return GameProgressWriteResult.Failed("AbandonedTimestampMustBeUtc");
+		if (replacedSessionKey is not null &&
+			string.Equals(replacedSessionKey, replacement.Record.SessionId.ToString("D"), StringComparison.OrdinalIgnoreCase))
+			return GameProgressWriteResult.Conflict("ReplacementSessionMustHaveANewId");
+
+		try
+		{
+			using var connection = OpenWriter();
+			using var transaction = connection.BeginTransaction();
+			if (replacedSessionKey is not null)
+			{
+				using var abandon = connection.CreateCommand();
+				abandon.Transaction = transaction;
+				abandon.CommandText = """
+					UPDATE GameSessions
+					SET Status = 'Abandoned', CompletedAtUtc = NULL, AbandonedAtUtc = $abandoned,
+						SnapshotVersion = NULL, SnapshotJson = NULL
+					WHERE SessionId = $id AND Status = 'Active';
+					""";
+				abandon.Parameters.AddWithValue("$id", replacedSessionKey);
+				abandon.Parameters.AddWithValue("$abandoned", FormatUtc(abandonedAtUtc));
+				if (abandon.ExecuteNonQuery() != 1)
+				{
+					transaction.Rollback();
+					return GameProgressWriteResult.Conflict("ActiveSessionNotFound");
+				}
+			}
+
+			using var insert = connection.CreateCommand();
+			insert.Transaction = transaction;
+			insert.CommandText =
+				"INSERT INTO GameSessions (" + SessionColumns + ") VALUES ($id, $status, $started, NULL, NULL, $difficulty, $elapsed, $errors, $hints, $snapshotVersion, $snapshotJson);";
+			AddRecordParameters(insert, replacement.Record);
+			insert.Parameters.AddWithValue("$snapshotVersion", replacement.SnapshotVersion);
+			insert.Parameters.AddWithValue("$snapshotJson", replacement.SnapshotJson);
+			insert.ExecuteNonQuery();
+			transaction.Commit();
+			return GameProgressWriteResult.Saved();
+		}
+		catch (SqliteException exception)
+		{
+			LogWriteFailure("ReplaceActive", replacement.SessionId, exception);
+			return IsUniqueConstraintViolation(exception)
+				? GameProgressWriteResult.Conflict("ActiveSessionAlreadyExists")
+				: GameProgressWriteResult.Failed("DatabaseWriteFailed");
+		}
 	}
 
 	private GameProgressWriteResult Save(SavedGameSession session)
@@ -233,9 +323,9 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 		}
 	}
 
-	private GameProgressWriteResult AbandonUnrecoverableActive(Guid sessionId, DateTimeOffset abandonedAtUtc)
+	private GameProgressWriteResult AbandonUnrecoverableActive(string sessionKey, DateTimeOffset abandonedAtUtc)
 	{
-		if (sessionId == Guid.Empty || abandonedAtUtc.Offset != TimeSpan.Zero)
+		if (abandonedAtUtc.Offset != TimeSpan.Zero)
 			return GameProgressWriteResult.Failed("SessionAndTimestampMustBeValid");
 
 		try
@@ -250,7 +340,7 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 					SnapshotVersion = NULL, SnapshotJson = NULL
 				WHERE SessionId = $id AND Status = 'Active';
 				""";
-			command.Parameters.AddWithValue("$id", sessionId.ToString("D"));
+			command.Parameters.AddWithValue("$id", sessionKey);
 			command.Parameters.AddWithValue("$abandoned", FormatUtc(abandonedAtUtc));
 			var changed = command.ExecuteNonQuery();
 			transaction.Commit();
@@ -258,7 +348,11 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 		}
 		catch (SqliteException exception)
 		{
-			LogWriteFailure("AbandonUnrecoverableActive", sessionId, exception);
+			_logger.LogError(exception,
+				"Game progress database operation {Operation} failed for unrecoverable session row {SessionKey} with SQLite code {SqliteErrorCode}.",
+				"AbandonUnrecoverableActive",
+				sessionKey,
+				exception.SqliteErrorCode);
 			return GameProgressWriteResult.Failed("DatabaseWriteFailed");
 		}
 	}
@@ -287,7 +381,18 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 		using var reader = command.ExecuteReader();
 		var records = new List<GameProgressRecord>();
 		while (reader.Read())
-			records.Add(ReadRecord(reader));
+		{
+			try
+			{
+				records.Add(ReadRecord(reader));
+			}
+			catch (Exception exception) when (IsInvalidPersistedRecord(exception))
+			{
+				_logger.LogWarning(exception,
+					"Game progress row {SessionKey} was skipped because it contains invalid persisted fields.",
+					GetRawSessionKey(reader));
+			}
+		}
 		return records.AsReadOnly();
 	}
 
@@ -318,13 +423,14 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 
 	private static GameProgressRecord ReadRecord(SqliteDataReader reader)
 	{
-		var sessionId = Guid.Parse(reader.GetString(0));
+		if (!Guid.TryParse(reader.GetString(0), out var sessionId) || sessionId == Guid.Empty)
+			throw new InvalidDataException("The database contains an invalid game session identifier.");
 		if (!Enum.TryParse<GameProgressStatus>(reader.GetString(1), ignoreCase: false, out var status) || !Enum.IsDefined(status))
 			throw new InvalidDataException("The database contains an unknown game progress status.");
 		var difficulty = (DifficultyLevel)reader.GetInt32(5);
 		if (!Enum.IsDefined(difficulty))
 			throw new InvalidDataException("The database contains an unknown game difficulty.");
-		return new GameProgressRecord(
+		var record = new GameProgressRecord(
 			sessionId,
 			status,
 			ParseUtc(reader.GetString(2)),
@@ -334,6 +440,9 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 			reader.GetInt64(6),
 			reader.GetInt32(7),
 			reader.GetInt32(8));
+		if (!IsValidRecord(record))
+			throw new InvalidDataException("The database contains invalid game progress metrics or timestamps.");
+		return record;
 	}
 
 	private static void AddRecordParameters(SqliteCommand command, GameProgressRecord record)
@@ -391,12 +500,26 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 		return true;
 	}
 
-	private static bool IsValidRecord(GameProgressRecord record) =>
-		Enum.IsDefined(record.Status) && Enum.IsDefined(record.Difficulty) &&
-		record.StartedAtUtc.Offset == TimeSpan.Zero &&
-		(!record.CompletedAtUtc.HasValue || record.CompletedAtUtc.Value.Offset == TimeSpan.Zero) &&
-		(!record.AbandonedAtUtc.HasValue || record.AbandonedAtUtc.Value.Offset == TimeSpan.Zero) &&
-		record.ActiveElapsedTicks >= 0 && record.ErrorCount >= 0 && record.DisplayedHintLevelCount >= 0;
+	private static bool IsValidRecord(GameProgressRecord record)
+	{
+		var terminalTimestampsMatchStatus = record.Status switch
+		{
+			GameProgressStatus.Active => !record.CompletedAtUtc.HasValue && !record.AbandonedAtUtc.HasValue,
+			GameProgressStatus.Completed => record.CompletedAtUtc.HasValue && !record.AbandonedAtUtc.HasValue,
+			GameProgressStatus.Abandoned => !record.CompletedAtUtc.HasValue && record.AbandonedAtUtc.HasValue,
+			_ => false
+		};
+		var terminalTimesFollowStart =
+			(!record.CompletedAtUtc.HasValue || record.CompletedAtUtc.Value >= record.StartedAtUtc) &&
+			(!record.AbandonedAtUtc.HasValue || record.AbandonedAtUtc.Value >= record.StartedAtUtc);
+
+		return Enum.IsDefined(record.Status) && Enum.IsDefined(record.Difficulty) &&
+			record.StartedAtUtc.Offset == TimeSpan.Zero &&
+			(!record.CompletedAtUtc.HasValue || record.CompletedAtUtc.Value.Offset == TimeSpan.Zero) &&
+			(!record.AbandonedAtUtc.HasValue || record.AbandonedAtUtc.Value.Offset == TimeSpan.Zero) &&
+			terminalTimestampsMatchStatus && terminalTimesFollowStart &&
+			record.ActiveElapsedTicks >= 0 && record.ErrorCount >= 0 && record.DisplayedHintLevelCount >= 0;
+	}
 
 	private SqliteConnection OpenReader()
 	{
@@ -437,10 +560,11 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 
 	private static object DbValue(DateTimeOffset? value) => value.HasValue ? FormatUtc(value.Value) : DBNull.Value;
 
-	private GameProgressLoadResult RecoveryRequired(GameProgressRecord record, string reason)
+	private GameProgressLoadResult RecoveryRequired(GameProgressRecord? record, string reason, string? recoverySessionKey = null)
 	{
-		_logger.LogWarning("Game progress recovery is required for session {SessionId}; reason {ReasonCode}.", record.SessionId, reason);
-		return GameProgressLoadResult.RecoveryRequired(reason, record);
+		_logger.LogWarning("Game progress recovery is required for session {SessionId}; reason {ReasonCode}.",
+			recoverySessionKey ?? record?.SessionId.ToString("D"), reason);
+		return GameProgressLoadResult.RecoveryRequired(reason, record, recoverySessionKey);
 	}
 
 	private void LogWriteFailure(string operation, Guid sessionId, SqliteException exception)
@@ -452,10 +576,35 @@ public sealed class SqliteGameProgressStore : IGameProgressStore
 			exception.SqliteErrorCode);
 	}
 
-	private static Task<TResult> RunInBackground<TResult>(Func<TResult> operation, CancellationToken cancellationToken)
+	private Task<TResult> RunInBackground<TResult>(Func<TResult> operation, CancellationToken cancellationToken)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		return Task.Run(operation, cancellationToken);
+		return Task.Run(() =>
+		{
+			EnsureSchemaMigrated();
+			return operation();
+		}, cancellationToken);
 	}
+
+	private void EnsureSchemaMigrated()
+	{
+		lock (_schemaMigrationLock)
+		{
+			if (_schemaMigrated)
+				return;
+
+			new SqliteSchemaMigrator(_connectionFactory).Migrate();
+			_schemaMigrated = true;
+		}
+	}
+
+	private static bool IsInvalidPersistedRecord(Exception exception) =>
+		exception is InvalidDataException or FormatException or ArgumentException or InvalidCastException or OverflowException;
+
+	private static bool IsUniqueConstraintViolation(SqliteException exception) =>
+		exception.SqliteErrorCode == 19 && exception.SqliteExtendedErrorCode is 1555 or 2067;
+
+	private static string? GetRawSessionKey(SqliteDataReader reader) =>
+		reader.IsDBNull(0) ? null : Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture);
 
 }

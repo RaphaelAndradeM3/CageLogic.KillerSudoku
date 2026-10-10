@@ -14,7 +14,8 @@ public sealed record LoadActiveGameResult(
 	LoadActiveGameStatus Status,
 	GameSession? Session = null,
 	GameProgressRecord? Record = null,
-	string? RecoveryReason = null);
+	string? RecoveryReason = null,
+	string? RecoverySessionKey = null);
 
 /// <summary>Loads and validates the active snapshot before exposing a resumable session.</summary>
 public sealed class LoadActiveGameUseCase(
@@ -30,7 +31,11 @@ public sealed class LoadActiveGameUseCase(
 		if (loaded.Status == GameProgressLoadStatus.NoActiveSession)
 			return new LoadActiveGameResult(LoadActiveGameStatus.NoActiveSession);
 		if (loaded.Status == GameProgressLoadStatus.RecoveryRequired)
-			return new LoadActiveGameResult(LoadActiveGameStatus.RecoveryRequired, Record: loaded.Record, RecoveryReason: loaded.RecoveryReason);
+			return new LoadActiveGameResult(
+				LoadActiveGameStatus.RecoveryRequired,
+				Record: loaded.Record,
+				RecoveryReason: loaded.RecoveryReason,
+				RecoverySessionKey: loaded.RecoverySessionKey);
 		if (loaded.Session is null)
 			return new LoadActiveGameResult(LoadActiveGameStatus.RecoveryRequired, RecoveryReason: "ActiveSnapshotMissing");
 
@@ -38,13 +43,19 @@ public sealed class LoadActiveGameUseCase(
 		{
 			var snapshot = _mapper.Deserialize(loaded.Session.SnapshotJson);
 			if (snapshot.Version != loaded.Session.SnapshotVersion)
-				return new LoadActiveGameResult(LoadActiveGameStatus.RecoveryRequired, Record: loaded.Session.Record, RecoveryReason: "SnapshotVersionMismatch");
+				return new LoadActiveGameResult(LoadActiveGameStatus.RecoveryRequired,
+					Record: loaded.Session.Record,
+					RecoveryReason: "SnapshotVersionMismatch",
+					RecoverySessionKey: loaded.Session.SessionId.ToString("D"));
 			var session = _mapper.Restore(snapshot, getHintUseCase: getHintUseCase);
 			return new LoadActiveGameResult(LoadActiveGameStatus.Loaded, session, loaded.Session.Record);
 		}
 		catch (InvalidDataException)
 		{
-			return new LoadActiveGameResult(LoadActiveGameStatus.RecoveryRequired, Record: loaded.Session.Record, RecoveryReason: "SnapshotInvalid");
+			return new LoadActiveGameResult(LoadActiveGameStatus.RecoveryRequired,
+				Record: loaded.Session.Record,
+				RecoveryReason: "SnapshotInvalid",
+				RecoverySessionKey: loaded.Session.SessionId.ToString("D"));
 		}
 	}
 }

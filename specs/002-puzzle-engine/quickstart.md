@@ -100,12 +100,14 @@ Em 2026-10-06, o mesmo benchmark foi executado em Release no Windows 10 x64 (`10
 `CageLogic.slnx` contém as bibliotecas e os testes `net10.0`. O host MAUI da feature 004 está em `src/CageLogic.Maui/CageLogic.Maui.csproj`; executar nele:
 
 ```powershell
-dotnet build <caminho-do-host.csproj> --configuration Release -f net10.0-windows10.0.19041.0
-dotnet build <caminho-do-host.csproj> --configuration Release -f net10.0-android
+dotnet build src/CageLogic.Maui/CageLogic.Maui.csproj --configuration Release -f net10.0-windows10.0.19041.0
+dotnet build src/CageLogic.Maui/CageLogic.Maui.csproj --configuration Release -f net10.0-android
 ```
 
 ## Validação executada
 
 Em 2026-10-06, `dotnet build CageLogic.slnx --configuration Release --warnaserror --no-restore` concluiu com 0 warnings e 0 erros; `dotnet test CageLogic.slnx --no-build --no-restore --configuration Release` aprovou 78 testes (34 Domain e 44 Application). O benchmark opt-in não foi executado nesta validação. O restore de dependências de teste exigiu `dotnet restore CageLogic.slnx --source https://api.nuget.org/v3/index.json` neste ambiente porque o feed privado configurado rejeitou a credencial local.
 
-Em 2026-10-09, após a alteração T045, `dotnet build CageLogic.slnx --configuration Release --warnaserror --no-restore` concluiu sem erros; `dotnet test CageLogic.slnx --no-build --no-restore --configuration Release` aprovou 183 testes (38 Domain, 125 Application e 20 Infrastructure). O build MAUI Release para Windows passou com 0 avisos e erros usando uma saída temporária, pois o app estava aberto. O build MAUI Release Android passou com 0 avisos e erros usando `-p:AndroidLinkMode=None -p:RunAOTCompilation=false`. A aceitação visual manual e as medições de geração com cages agrupadas continuam pendentes.
+Em 2026-10-09, após a alteração T045, `dotnet build CageLogic.slnx --configuration Release --warnaserror --no-restore` e a suíte de teste passaram. O build MAUI Release para Windows passou com 0 avisos e erros usando uma saída temporária, pois o app estava aberto. O build MAUI Release Android passou com 0 avisos e erros usando `-p:AndroidLinkMode=None -p:RunAOTCompilation=false`. A aceitação visual manual e as medições de geração com cages agrupadas continuam pendentes. A contagem desse registro foi substituída pela revalidação abaixo.
+
+Em 2026-10-10, durante a revisão dos apontamentos do PR #5, os projetos de teste foram executados separadamente em Release e passaram 196 testes (38 Domain, 132 Application e 26 Infrastructure). O build MAUI Windows Release passou com zero avisos e erros. O build MAUI Android Release também passou com zero avisos e erros usando `-p:AndroidLinkMode=None -p:RunAOTCompilation=false` e um cache NuGet temporário gravável. O cache global padrão não permitiu ao linker criar um arquivo no pacote MAUI instalado; a restauração local e o build com cache temporário concluíram normalmente.

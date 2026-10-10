@@ -15,11 +15,10 @@ public partial class HomeViewModel : ObservableObject
 	private readonly GameSessionStore _sessionStore;
 	private readonly LoadActiveGameUseCase _loadActiveGame;
 	private readonly CreateGameProgressUseCase _createGameProgress;
-	private readonly AbandonGameProgressUseCase _abandonGameProgress;
 	private readonly IGameProgressStore _progressStore;
 	private readonly ILogger<HomeViewModel> _logger;
 	private CancellationTokenSource? _generationCancellation;
-	private GameProgressRecord? _unrecoverableRecord;
+	private string? _unrecoverableSessionKey;
 	private bool _initialized;
 
 	[ObservableProperty]
@@ -43,12 +42,14 @@ public partial class HomeViewModel : ObservableObject
 	[ObservableProperty]
 	public partial bool HasRetryableFailure { get; set; }
 
+	[ObservableProperty]
+	public partial bool HasLoadFailure { get; set; }
+
 	public HomeViewModel(
 		GeneratePuzzleUseCase generatePuzzle,
 		GameSessionStore sessionStore,
 		LoadActiveGameUseCase loadActiveGame,
 		CreateGameProgressUseCase createGameProgress,
-		AbandonGameProgressUseCase abandonGameProgress,
 		IGameProgressStore progressStore,
 		ILogger<HomeViewModel> logger)
 	{
@@ -56,13 +57,13 @@ public partial class HomeViewModel : ObservableObject
 		_sessionStore = sessionStore;
 		_loadActiveGame = loadActiveGame;
 		_createGameProgress = createGameProgress;
-		_abandonGameProgress = abandonGameProgress;
 		_progressStore = progressStore;
 		_logger = logger;
 	}
 
 	public IReadOnlyList<DifficultyLevel> Difficulties { get; } = Enum.GetValues<DifficultyLevel>();
-	public bool CanStartGeneration => !IsGenerating && !IsInitializing && _initialized;
+	public bool CanStartGeneration =>
+		!IsGenerating && !IsInitializing && _initialized && (!RecoveryRequired || _unrecoverableSessionKey is not null);
 
 	public async Task InitializeAsync(CancellationToken cancellationToken = default)
 	{
@@ -84,6 +85,7 @@ public partial class HomeViewModel : ObservableObject
 
 		IsInitializing = true;
 		_initialized = false;
+		HasLoadFailure = false;
 		OnPropertyChanged(nameof(CanStartGeneration));
 		try
 		{
@@ -96,25 +98,29 @@ public partial class HomeViewModel : ObservableObject
 						_sessionStore.Start(loaded.Session, loaded.Record, _progressStore, isPersisted: true);
 						HasActiveGame = true;
 						RecoveryRequired = false;
-						_unrecoverableRecord = null;
+						_unrecoverableSessionKey = null;
+						HasLoadFailure = false;
 						StatusMessage = "Uma partida salva está pronta para continuar.";
 						break;
 					case LoadActiveGameStatus.RecoveryRequired:
 						_sessionStore.Clear();
 						HasActiveGame = false;
 						RecoveryRequired = true;
-						_unrecoverableRecord = loaded.Record;
+						_unrecoverableSessionKey = loaded.RecoverySessionKey;
+						HasLoadFailure = _unrecoverableSessionKey is null;
 						StatusMessage = "Não foi possível ler a partida salva. Confirme antes de descartá-la e iniciar outra.";
 						break;
 					default:
 						_sessionStore.Clear();
 						HasActiveGame = false;
 						RecoveryRequired = false;
-						_unrecoverableRecord = null;
+						_unrecoverableSessionKey = null;
+						HasLoadFailure = false;
 						StatusMessage = "Nenhuma partida está pronta para continuar. Você pode iniciar uma nova.";
 						break;
 				}
-				_initialized = true;
+				_initialized = !HasLoadFailure;
+				OnPropertyChanged(nameof(CanStartGeneration));
 			});
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -128,7 +134,9 @@ public partial class HomeViewModel : ObservableObject
 			await MainThread.InvokeOnMainThreadAsync(() =>
 			{
 				HasActiveGame = false;
-				RecoveryRequired = true;
+				RecoveryRequired = false;
+				_unrecoverableSessionKey = null;
+				HasLoadFailure = true;
 				StatusMessage = $"Não foi possível verificar a partida salva. Tente novamente antes de iniciar outra. Código: {correlationId}";
 			});
 		}
@@ -141,6 +149,9 @@ public partial class HomeViewModel : ObservableObject
 			});
 		}
 	}
+
+	[RelayCommand(AllowConcurrentExecutions = false)]
+	private Task RetryLoadAsync(CancellationToken cancellationToken) => InitializeAsync(cancellationToken);
 
 	[RelayCommand(AllowConcurrentExecutions = false)]
 	private async Task ResumeActiveGameAsync()
@@ -163,8 +174,7 @@ public partial class HomeViewModel : ObservableObject
 	{
 		if (!CanStartGeneration || IsGenerating)
 			return;
-
-		if (!await ConfirmAndReplaceActiveGameAsync())
+		if (!await ConfirmReplacementAsync())
 			return;
 
 		using var generationCancellation = CancellationTokenSource.CreateLinkedTokenSource(commandToken);
@@ -173,7 +183,7 @@ public partial class HomeViewModel : ObservableObject
 		{
 			IsGenerating = true;
 			HasRetryableFailure = false;
-			StatusMessage = "Gerando um puzzle. Você pode cancelar a qualquer momento.";
+			StatusMessage = "Gerando um puzzle. Você pode cancelar quando quiser.";
 		});
 
 		try
@@ -186,18 +196,35 @@ public partial class HomeViewModel : ObservableObject
 
 			if (result.IsSuccess && result.GeneratedPuzzle is not null)
 			{
-				var created = await _createGameProgress.ExecuteAsync(result.GeneratedPuzzle, generationCancellation.Token).ConfigureAwait(false);
-				generationCancellation.Token.ThrowIfCancellationRequested();
+				var replacement = await PrepareReplacementAsync(generationCancellation.Token).ConfigureAwait(false);
+				if (!replacement.Allowed)
+					return;
+
+				var created = replacement.SessionKey is null
+					? await _createGameProgress.ExecuteAsync(result.GeneratedPuzzle, generationCancellation.Token).ConfigureAwait(false)
+					: await _createGameProgress.ReplaceActiveAsync(result.GeneratedPuzzle, replacement.SessionKey, generationCancellation.Token).ConfigureAwait(false);
+				if (replacement.SessionKey is not null && !created.Persistence.IsSaved)
+				{
+					await MainThread.InvokeOnMainThreadAsync(() =>
+					{
+						HasRetryableFailure = true;
+						StatusMessage = "Não foi possível salvar a nova partida; a partida anterior foi mantida.";
+					});
+					return;
+				}
+
 				await MainThread.InvokeOnMainThreadAsync(async () =>
 				{
-					generationCancellation.Token.ThrowIfCancellationRequested();
+					_sessionStore.Clear();
 					_sessionStore.Start(created.Session, created.Record, _progressStore, created.IsPersisted);
 					HasActiveGame = true;
 					RecoveryRequired = false;
+					_unrecoverableSessionKey = null;
+					HasLoadFailure = false;
 					_initialized = true;
 					StatusMessage = created.IsPersisted
 						? string.Empty
-						: "O primeiro salvamento falhou. A partida continua na memória; mudanças recentes não serão confirmadas até o salvamento funcionar.";
+						: "O primeiro salvamento falhou. A partida continua na memória; tente salvar novamente.";
 					await Shell.Current.GoToAsync(nameof(GamePage));
 				});
 			}
@@ -238,61 +265,55 @@ public partial class HomeViewModel : ObservableObject
 		}
 	}
 
-	private async Task<bool> ConfirmAndReplaceActiveGameAsync()
+	private async Task<bool> ConfirmReplacementAsync()
 	{
-		if (HasActiveGame && _sessionStore.Current is { } session && _sessionStore.ActiveRecord is not null)
+		if (HasActiveGame)
 		{
-			var confirmed = await Shell.Current.DisplayAlertAsync(
+			return await Shell.Current.DisplayAlertAsync(
 				"Substituir partida?",
-				"A partida em andamento será marcada como abandonada antes de iniciar outra.",
+				"A partida atual só será abandonada se o novo jogo for gerado e salvo.",
 				"Substituir",
 				"Cancelar");
-			if (!confirmed)
-				return false;
-
-			if (_sessionStore.IsPersisted && _sessionStore.Commands is { } commands)
-			{
-				var result = await commands.ExecuteExclusiveAsync(
-					() => _abandonGameProgress.ExecuteAsync(session, commands.ActiveRecord));
-				if (!result.Persistence.IsSaved)
-				{
-					StatusMessage = "Não foi possível salvar o abandono. A partida atual foi mantida.";
-					return false;
-				}
-			}
-			_sessionStore.Clear();
-			HasActiveGame = false;
 		}
-		else if (RecoveryRequired)
+		if (RecoveryRequired)
 		{
-			var confirmed = await Shell.Current.DisplayAlertAsync(
+			return await Shell.Current.DisplayAlertAsync(
 				"Descartar partida inválida?",
-				"O salvamento não pode ser restaurado. Confirmar marcará o registro como abandonado e permitirá iniciar uma nova partida.",
+				"O salvamento só será abandonado se o novo jogo for gerado e salvo.",
 				"Descartar e continuar",
 				"Cancelar");
-			if (!confirmed)
-				return false;
-
-			if (_unrecoverableRecord is null)
-			{
-				StatusMessage = "Não foi possível identificar o registro inválido. Tente verificar o armazenamento novamente.";
-				return false;
-			}
-
-			var abandoned = await _progressStore.AbandonUnrecoverableActiveAsync(
-				_unrecoverableRecord.SessionId, DateTimeOffset.UtcNow);
-			if (!abandoned.IsSaved)
-			{
-				StatusMessage = "Não foi possível registrar o abandono do salvamento inválido.";
-				return false;
-			}
-			RecoveryRequired = false;
-			_unrecoverableRecord = null;
 		}
-
 		return true;
 	}
 
+	private async Task<(bool Allowed, string? SessionKey)> PrepareReplacementAsync(CancellationToken cancellationToken)
+	{
+		if (HasActiveGame)
+		{
+			if (_sessionStore.Commands is not { } commands || _sessionStore.Current is null)
+			{
+				await MainThread.InvokeOnMainThreadAsync(() =>
+					StatusMessage = "Não foi possível preservar a partida atual. Tente verificar o armazenamento novamente.");
+				return (false, null);
+			}
+
+			var saved = await commands.PersistCurrentAsync(cancellationToken).ConfigureAwait(false);
+			if (!saved.IsConfirmed)
+			{
+				await MainThread.InvokeOnMainThreadAsync(() =>
+					StatusMessage = "Não foi possível confirmar o salvamento da partida atual; ela foi mantida.");
+				return (false, null);
+			}
+			return (true, commands.ActiveRecord.SessionId.ToString("D"));
+		}
+		if (RecoveryRequired)
+		{
+			if (_unrecoverableSessionKey is null)
+				return (false, null);
+			return (true, _unrecoverableSessionKey);
+		}
+		return (true, null);
+	}
 	[RelayCommand]
 	private void CancelGeneration() => _generationCancellation?.Cancel();
 

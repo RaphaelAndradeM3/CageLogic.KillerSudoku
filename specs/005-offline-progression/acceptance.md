@@ -1,12 +1,14 @@
 # Aceitação manual — 005-offline-progression
 
-Data da verificação: 2026-10-09.
+Data da verificação manual: 2026-10-09.
+Revalidação automatizada desta correção: 2026-10-10.
 
 ## Gates automatizados
 
 - Build MAUI Windows Release após corrigir o layout, com `--warnaserror --no-restore`: passou, 0 avisos e 0 erros.
 - Build MAUI Android Release após a correção, com `--warnaserror --no-restore -p:AndroidLinkMode=None -p:RunAOTCompilation=false`: passou, 0 avisos e 0 erros. A compilação completa padrão tentou escrever artefato de trimming no cache NuGet global e foi bloqueada pela permissão de escrita fora do workspace.
-- `dotnet test CageLogic.slnx --no-build --configuration Release --no-restore`: passaram 181 testes (Domain 38, Application 123, Infrastructure 20), 0 falhas.
+- A suíte de teste passou na aceitação de 2026-10-09. Na revalidação de 2026-10-10, os três projetos de teste passaram separadamente em Release: 196 testes (Domain 38, Application 132, Infrastructure 26), sem falhas; esta é a contagem atual.
+- Os builds MAUI Windows Release e Android Release da revalidação passaram com zero avisos e erros. No Android, usei `-p:AndroidLinkMode=None -p:RunAOTCompilation=false` e um cache NuGet temporário gravável; o cache global padrão impediu o linker de criar um arquivo no pacote MAUI instalado.
 - `git diff --check`: passou após a correção de layout e atualização desta evidência.
 
 ## Perfis usados

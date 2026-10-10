@@ -27,6 +27,27 @@ public sealed class SqliteGameProgressStoreTests
 	}
 
 	[Test]
+	public async Task FirstRepositoryOperation_MigratesSchemaOnBackgroundStoreAccess()
+	{
+		var directory = Path.Combine(Path.GetTempPath(), $"CageLogic.Progression.Migration.{Guid.NewGuid():N}");
+		Directory.CreateDirectory(directory);
+		var path = Path.Combine(directory, "progression.db");
+		try
+		{
+			var factory = new SqliteConnectionFactory(path);
+			var store = new SqliteGameProgressStore(factory);
+			Assert.That((await store.LoadActiveAsync()).Status, Is.EqualTo(GameProgressLoadStatus.NoActiveSession));
+			using var connection = Open(path);
+			Assert.That(ReadScalar(connection, "PRAGMA user_version;"), Is.EqualTo(1L));
+		}
+		finally
+		{
+			SqliteConnection.ClearAllPools();
+			Directory.Delete(directory, recursive: true);
+		}
+	}
+
+	[Test]
 	public async Task SaveFailure_RollsBackSnapshotAndKeepsLastValidSession()
 	{
 		await WithStoreAsync(async (factory, store, path) =>
@@ -87,7 +108,7 @@ public sealed class SqliteGameProgressStoreTests
 			var recovery = await store.LoadActiveAsync();
 			var abandonedAt = active.Record.StartedAtUtc.AddMinutes(5);
 			Assert.That(recovery.Status, Is.EqualTo(GameProgressLoadStatus.RecoveryRequired));
-			Assert.That((await store.AbandonUnrecoverableActiveAsync(active.SessionId, abandonedAt)).IsSaved, Is.True);
+			Assert.That((await store.AbandonUnrecoverableActiveAsync(active.SessionId.ToString("D"), abandonedAt)).IsSaved, Is.True);
 
 			Assert.That((await store.LoadActiveAsync()).Status, Is.EqualTo(GameProgressLoadStatus.NoActiveSession));
 			var record = (await store.GetRecordsAsync()).Single();
@@ -108,10 +129,89 @@ public sealed class SqliteGameProgressStoreTests
 			var active = ActiveSession();
 			Assert.That((await store.CreateAsync(active)).IsSaved, Is.True);
 
-			var result = await store.AbandonUnrecoverableActiveAsync(Guid.NewGuid(), active.Record.StartedAtUtc.AddMinutes(1));
+			var result = await store.AbandonUnrecoverableActiveAsync(Guid.NewGuid().ToString("D"), active.Record.StartedAtUtc.AddMinutes(1));
 
 			Assert.That(result.Status, Is.EqualTo(GameProgressWriteStatus.Conflict));
 			Assert.That((await store.LoadActiveAsync()).Session, Is.EqualTo(active));
+		});
+	}
+
+	[TestCase("bad-id", "2026-10-09T12:00:00.0000000+00:00")]
+	[TestCase("00000000-0000-0000-0000-000000000001", "not-a-timestamp")]
+	public async Task LoadActive_MalformedRecordFieldsRequireRecoverableReplacement(string sessionId, string startedAt)
+	{
+		await WithStoreAsync(async (factory, store, path) =>
+		{
+			var active = ActiveSession();
+			Assert.That((await store.CreateAsync(active)).IsSaved, Is.True);
+			using (var connection = Open(path))
+			{
+				using var command = connection.CreateCommand();
+				command.CommandText = "UPDATE GameSessions SET SessionId = $id, StartedAtUtc = $started WHERE SessionId = $original;";
+				command.Parameters.AddWithValue("$id", sessionId);
+				command.Parameters.AddWithValue("$started", startedAt);
+				command.Parameters.AddWithValue("$original", active.SessionId.ToString("D"));
+				command.ExecuteNonQuery();
+			}
+
+			var result = await store.LoadActiveAsync();
+			Assert.That(result.Status, Is.EqualTo(GameProgressLoadStatus.RecoveryRequired));
+			Assert.That(result.Record, Is.Null);
+			Assert.That(result.RecoverySessionKey, Is.EqualTo(sessionId));
+			Assert.That((await store.AbandonUnrecoverableActiveAsync(sessionId, active.Record.StartedAtUtc.AddMinutes(1))).IsSaved, Is.True);
+			Assert.That(await store.LoadActiveAsync(), Is.EqualTo(GameProgressLoadResult.NoActiveSession()));
+		});
+	}
+
+	[Test]
+	public async Task GetRecords_SkipsRowsWithMalformedDatesSoStatisticsRemainAvailable()
+	{
+		await WithStoreAsync(async (factory, store, path) =>
+		{
+			var active = ActiveSession();
+			Assert.That((await store.CreateAsync(active)).IsSaved, Is.True);
+			using (var connection = Open(path))
+				Execute(connection, $"UPDATE GameSessions SET StartedAtUtc = 'not-a-timestamp' WHERE SessionId = '{active.SessionId:D}';");
+
+			Assert.That(await store.GetRecordsAsync(), Is.Empty);
+		});
+	}
+
+	[Test]
+	public async Task ReplaceActive_WhenNewInsertFails_RollsBackAbandonmentOfCurrentGame()
+	{
+		await WithStoreAsync(async (_, store, path) =>
+		{
+			var current = ActiveSession(snapshot: "{\"version\":1,\"value\":1}");
+			var replacement = ActiveSession(snapshot: "{\"version\":1,\"value\":2}");
+			Assert.That((await store.CreateAsync(current)).IsSaved, Is.True);
+			using (var connection = Open(path))
+				Execute(connection, $"CREATE TRIGGER FailReplacement BEFORE INSERT ON GameSessions WHEN NEW.SessionId = '{replacement.SessionId:D}' BEGIN SELECT RAISE(ABORT, 'injected replacement failure'); END;");
+
+			var result = await store.ReplaceActiveAsync(replacement, current.SessionId.ToString("D"), current.Record.StartedAtUtc.AddMinutes(1));
+
+			Assert.That(result.Status, Is.EqualTo(GameProgressWriteStatus.Failed));
+			Assert.That((await store.LoadActiveAsync()).Session, Is.EqualTo(current));
+			Assert.That((await store.GetRecordsAsync()).Single().Status, Is.EqualTo(GameProgressStatus.Active));
+		});
+	}
+
+	[Test]
+	public async Task ReplaceActive_ArchivesOldRowAndPersistsNewRowInOneOperation()
+	{
+		await WithStoreAsync(async (_, store, _) =>
+		{
+			var current = ActiveSession();
+			var replacement = ActiveSession();
+			Assert.That((await store.CreateAsync(current)).IsSaved, Is.True);
+
+			var result = await store.ReplaceActiveAsync(replacement, current.SessionId.ToString("D"), current.Record.StartedAtUtc.AddMinutes(1));
+
+			Assert.That(result.IsSaved, Is.True);
+			Assert.That((await store.LoadActiveAsync()).Session, Is.EqualTo(replacement));
+			var rows = await store.GetRecordsAsync();
+			Assert.That(rows, Has.Count.EqualTo(2));
+			Assert.That(rows.Single(row => row.SessionId == current.SessionId).Status, Is.EqualTo(GameProgressStatus.Abandoned));
 		});
 	}
 
@@ -242,5 +342,12 @@ public sealed class SqliteGameProgressStoreTests
 		command.Parameters.AddWithValue("$id", id.ToString("D"));
 		var value = command.ExecuteScalar();
 		return value is DBNull ? null : value;
+	}
+
+	private static object? ReadScalar(SqliteConnection connection, string sql)
+	{
+		using var command = connection.CreateCommand();
+		command.CommandText = sql;
+		return command.ExecuteScalar();
 	}
 }

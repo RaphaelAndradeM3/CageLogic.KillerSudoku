@@ -87,6 +87,11 @@ if not exist "%KEY_PASS_FILE%" (
 
 echo.
 echo [2/2] Publicando APK Android assinado...
+del /q "%ANDROID_OUT%\*.apk" 2>nul
+if exist "%ANDROID_OUT%\*.apk" (
+    echo ERRO: nao foi possivel remover APKs antigos de "%ANDROID_OUT%".
+    exit /b 1
+)
 dotnet publish "%PROJECT%" -f net10.0-android -c Release -p:AndroidKeyStore=true -p:AndroidPackageFormats=apk "-p:AndroidSigningKeyStore=%KEYSTORE%" "-p:AndroidSigningKeyAlias=%KEY_ALIAS%" "-p:AndroidSigningStorePass=file:%STORE_PASS_FILE%" "-p:AndroidSigningKeyPass=file:%KEY_PASS_FILE%" "-p:PublishDir=%ANDROID_OUT%"
 if errorlevel 1 goto publish_failed
 

@@ -39,6 +39,42 @@ public sealed class GameProgressLifecycleTests
 	}
 
 	[Test]
+	public async Task Create_CallerCancellationAfterCommitStillReturnsCommittedSession()
+	{
+		using var cancellation = new CancellationTokenSource();
+		var store = new FakeGameProgressStore { AfterCreateCommit = cancellation.Cancel };
+
+		var result = await new CreateGameProgressUseCase(store).ExecuteAsync(
+			GameSessionTestData.CreateGeneratedPuzzle(),
+			cancellation.Token);
+
+		Assert.That(cancellation.IsCancellationRequested, Is.True);
+		Assert.That(result.Persistence.IsSaved, Is.True);
+		Assert.That(store.Active?.SessionId, Is.EqualTo(result.Record.SessionId));
+	}
+
+	[Test]
+	public async Task ReplaceActive_CallerCancellationAfterCommitStillReturnsCommittedSession()
+	{
+		var store = new FakeGameProgressStore();
+		var create = new CreateGameProgressUseCase(store);
+		var current = await create.ExecuteAsync(GameSessionTestData.CreateGeneratedPuzzle());
+		using var cancellation = new CancellationTokenSource();
+		store.AfterReplaceCommit = cancellation.Cancel;
+
+		var replacement = await create.ReplaceActiveAsync(
+			GameSessionTestData.CreateGeneratedPuzzle(),
+			current.Record.SessionId.ToString("D"),
+			cancellation.Token);
+
+		Assert.That(cancellation.IsCancellationRequested, Is.True);
+		Assert.That(replacement.Persistence.IsSaved, Is.True);
+		Assert.That(store.Active?.SessionId, Is.EqualTo(replacement.Record.SessionId));
+		Assert.That(store.Records.Single(record => record.SessionId == current.Record.SessionId).Status,
+			Is.EqualTo(GameProgressStatus.Abandoned));
+	}
+
+	[Test]
 	public async Task SaveAndLoad_RestoreTheSessionPausedWithHistoryAndMetrics()
 	{
 		var store = new FakeGameProgressStore();
@@ -95,9 +131,11 @@ public sealed class GameProgressLifecycleTests
 			session.EnterDigit(cell.Position, GameInputMode.Answer, generated.Solution.GetValue(cell.Position));
 
 		var completion = await new CompleteGameProgressUseCase(store).ExecuteAsync(session, created.Record!);
+		var duplicateCompletion = await new CompleteGameProgressUseCase(store).ExecuteAsync(session, created.Record!);
 
 		Assert.That(completion.Completion.IsCompleted, Is.True);
 		Assert.That(completion.Persistence?.IsSaved, Is.True);
+		Assert.That(duplicateCompletion.Persistence?.IsSaved, Is.True);
 		Assert.That(store.Records, Has.Count.EqualTo(1));
 		Assert.That(store.Records[0].Status, Is.EqualTo(GameProgressStatus.Completed));
 		Assert.That(store.Active, Is.Null);
@@ -147,6 +185,8 @@ public sealed class GameProgressLifecycleTests
 		public SavedGameSession? Active { get; set; }
 		public List<GameProgressRecord> Records { get; } = [];
 		public bool FailNextWrite { get; set; }
+		public Action? AfterCreateCommit { get; set; }
+		public Action? AfterReplaceCommit { get; set; }
 
 		public Task<GameProgressWriteResult> CreateAsync(SavedGameSession session, CancellationToken cancellationToken = default)
 		{
@@ -159,6 +199,7 @@ public sealed class GameProgressLifecycleTests
 				return Task.FromResult(GameProgressWriteResult.Conflict("active-session"));
 			Active = session;
 			Records.Add(session.Record);
+			AfterCreateCommit?.Invoke();
 			return Task.FromResult(GameProgressWriteResult.Saved());
 		}
 
@@ -185,9 +226,9 @@ public sealed class GameProgressLifecycleTests
 		public Task<GameProgressWriteResult> AbandonAsync(GameProgressRecord abandonedRecord, CancellationToken cancellationToken = default) =>
 			Task.FromResult(Transition(abandonedRecord));
 
-		public Task<GameProgressWriteResult> AbandonUnrecoverableActiveAsync(Guid sessionId, DateTimeOffset abandonedAtUtc, CancellationToken cancellationToken = default)
+		public Task<GameProgressWriteResult> AbandonUnrecoverableActiveAsync(string sessionKey, DateTimeOffset abandonedAtUtc, CancellationToken cancellationToken = default)
 		{
-			if (Active?.SessionId != sessionId)
+			if (Active?.SessionId.ToString("D") != sessionKey)
 				return Task.FromResult(GameProgressWriteResult.Conflict("not-active"));
 			var recoveredRecord = Active.Record with
 			{
@@ -197,6 +238,31 @@ public sealed class GameProgressLifecycleTests
 			};
 			ReplaceRecord(recoveredRecord);
 			Active = null;
+			return Task.FromResult(GameProgressWriteResult.Saved());
+		}
+
+		public Task<GameProgressWriteResult> ReplaceActiveAsync(
+			SavedGameSession replacement,
+			string? replacedSessionKey,
+			DateTimeOffset abandonedAtUtc,
+			CancellationToken cancellationToken = default)
+		{
+			if (replacedSessionKey is null
+				? Active is not null
+				: Active?.SessionId.ToString("D") != replacedSessionKey)
+				return Task.FromResult(GameProgressWriteResult.Conflict("not-active"));
+			if (Active is not null)
+			{
+				var abandoned = Active.Record with
+				{
+					Status = GameProgressStatus.Abandoned,
+					AbandonedAtUtc = abandonedAtUtc
+				};
+				ReplaceRecord(abandoned);
+			}
+			Active = replacement;
+			ReplaceRecord(replacement.Record);
+			AfterReplaceCommit?.Invoke();
 			return Task.FromResult(GameProgressWriteResult.Saved());
 		}
 
@@ -211,7 +277,7 @@ public sealed class GameProgressLifecycleTests
 				return GameProgressWriteResult.Failed("write-failed");
 			}
 			if (Active?.SessionId != record.SessionId)
-				return Records.Any(existing => existing == record)
+				return Records.Any(existing => IsSameTerminalRecord(existing, record))
 					? GameProgressWriteResult.Saved()
 					: GameProgressWriteResult.Conflict("not-active");
 			ReplaceRecord(record);
@@ -227,5 +293,17 @@ public sealed class GameProgressLifecycleTests
 			else
 				Records[index] = record;
 		}
+
+		private static bool IsSameTerminalRecord(GameProgressRecord current, GameProgressRecord requested) =>
+			current.SessionId == requested.SessionId &&
+			current.Status == requested.Status &&
+			current.StartedAtUtc == requested.StartedAtUtc &&
+			current.Difficulty == requested.Difficulty &&
+			current.ActiveElapsedTicks == requested.ActiveElapsedTicks &&
+			current.ErrorCount == requested.ErrorCount &&
+			current.DisplayedHintLevelCount == requested.DisplayedHintLevelCount &&
+			(requested.Status == GameProgressStatus.Completed
+				? current.CompletedAtUtc.HasValue && !current.AbandonedAtUtc.HasValue
+				: current.AbandonedAtUtc.HasValue && !current.CompletedAtUtc.HasValue);
 	}
 }

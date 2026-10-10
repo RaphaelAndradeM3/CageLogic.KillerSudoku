@@ -203,7 +203,10 @@ public sealed class GameProgressCommandQueueTests
 		public Task<GameProgressWriteResult> AbandonAsync(GameProgressRecord abandonedRecord, CancellationToken cancellationToken = default) =>
 			Task.FromResult(GameProgressWriteResult.Saved());
 
-		public Task<GameProgressWriteResult> AbandonUnrecoverableActiveAsync(Guid sessionId, DateTimeOffset abandonedAtUtc, CancellationToken cancellationToken = default) =>
+		public Task<GameProgressWriteResult> AbandonUnrecoverableActiveAsync(string sessionKey, DateTimeOffset abandonedAtUtc, CancellationToken cancellationToken = default) =>
+			Task.FromResult(GameProgressWriteResult.Saved());
+
+		public Task<GameProgressWriteResult> ReplaceActiveAsync(SavedGameSession replacement, string? replacedSessionKey, DateTimeOffset abandonedAtUtc, CancellationToken cancellationToken = default) =>
 			Task.FromResult(GameProgressWriteResult.Saved());
 
 		public Task<IReadOnlyList<GameProgressRecord>> GetRecordsAsync(CancellationToken cancellationToken = default) =>

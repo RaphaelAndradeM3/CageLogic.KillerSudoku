@@ -7,12 +7,16 @@ public partial class KillerSudokuBoardView : ContentView
 {
 	private readonly KillerSudokuBoardDrawable _drawable = new();
 	private readonly Button[,] _cellButtons = new Button[BoardGeometry.BoardOrder, BoardGeometry.BoardOrder];
+	private global::Microsoft.Maui.Controls.Application? _themeApplication;
+	private GameSessionViewState? _viewState;
 
 	public KillerSudokuBoardView()
 	{
 		InitializeComponent();
 		BoardCanvas.Drawable = _drawable;
 		BoardCanvas.StartInteraction += OnStartInteraction;
+		Loaded += OnLoaded;
+		Unloaded += OnUnloaded;
 		CreateAccessibleCells();
 		SizeChanged += (_, _) =>
 		{
@@ -27,18 +31,53 @@ public partial class KillerSudokuBoardView : ContentView
 	public void SetViewState(GameSessionViewState viewState)
 	{
 		ArgumentNullException.ThrowIfNull(viewState);
-		var application = global::Microsoft.Maui.Controls.Application.Current;
-		var isDarkTheme = application is not null
-			&& (application.UserAppTheme == AppTheme.Dark
-				|| (application.UserAppTheme == AppTheme.Unspecified && application.RequestedTheme == AppTheme.Dark));
-		_drawable.Update(viewState, isDarkTheme);
-		BoardCanvas.Invalidate();
+		_viewState = viewState;
+		RefreshTheme();
 		foreach (var cell in viewState.Cells)
 		{
 			var button = _cellButtons[cell.Position.Row, cell.Position.Column];
 			SemanticProperties.SetDescription(button, AccessibleCellPeer.Describe(cell));
 			SemanticProperties.SetHint(button, "Toque duas vezes para selecionar esta célula.");
 		}
+	}
+
+	private void OnLoaded(object? sender, EventArgs eventArgs)
+	{
+		var application = global::Microsoft.Maui.Controls.Application.Current;
+		if (!ReferenceEquals(_themeApplication, application))
+		{
+			if (_themeApplication is not null)
+				_themeApplication.RequestedThemeChanged -= OnRequestedThemeChanged;
+			_themeApplication = application;
+			if (_themeApplication is not null)
+				_themeApplication.RequestedThemeChanged += OnRequestedThemeChanged;
+		}
+		RefreshTheme();
+	}
+
+	private void OnUnloaded(object? sender, EventArgs eventArgs)
+	{
+		if (_themeApplication is not null)
+		{
+			_themeApplication.RequestedThemeChanged -= OnRequestedThemeChanged;
+			_themeApplication = null;
+		}
+	}
+
+	private void OnRequestedThemeChanged(object? sender, AppThemeChangedEventArgs eventArgs) =>
+		Microsoft.Maui.ApplicationModel.MainThread.BeginInvokeOnMainThread(RefreshTheme);
+
+	private void RefreshTheme()
+	{
+		if (_viewState is null)
+			return;
+
+		var application = global::Microsoft.Maui.Controls.Application.Current;
+		var isDarkTheme = application is not null
+			&& (application.UserAppTheme == AppTheme.Dark
+				|| (application.UserAppTheme == AppTheme.Unspecified && application.RequestedTheme == AppTheme.Dark));
+		_drawable.Update(_viewState, isDarkTheme);
+		BoardCanvas.Invalidate();
 	}
 
 	private void CreateAccessibleCells()

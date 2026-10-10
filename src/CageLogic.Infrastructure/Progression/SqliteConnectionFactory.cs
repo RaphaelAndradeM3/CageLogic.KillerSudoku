@@ -14,8 +14,7 @@ public sealed class SqliteConnectionFactory
 		_connectionString = new SqliteConnectionStringBuilder
 		{
 			DataSource = Path.GetFullPath(databasePath),
-			Mode = SqliteOpenMode.ReadWriteCreate,
-			Cache = SqliteCacheMode.Shared
+			Mode = SqliteOpenMode.ReadWriteCreate
 		}.ToString();
 	}
 

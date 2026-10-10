@@ -35,6 +35,11 @@
                     <Button Text="Iniciar partida" Command="{Binding GeneratePuzzleCommand}"
                             IsEnabled="{Binding CanStartGeneration}"
                             SemanticProperties.Hint="Gera um puzzle da dificuldade escolhida" />
+                    <Button Text="Tentar verificar o salvamento novamente" Command="{Binding RetryLoadCommand}"
+                            IsVisible="{Binding HasLoadFailure}"
+                            BackgroundColor="{AppThemeBinding Light=#E8EDF4, Dark=#364557}"
+                            TextColor="{AppThemeBinding Light=#25354A, Dark=#F3F6FA}"
+                            SemanticProperties.Hint="Tenta carregar novamente a partida e verificar o armazenamento local" />
                     <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
                         <ActivityIndicator IsRunning="{Binding IsGenerating}" IsVisible="{Binding IsGenerating}" Color="#315F9D" />
                         <Label Text="{Binding StatusMessage}" TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" VerticalOptions="Center" />

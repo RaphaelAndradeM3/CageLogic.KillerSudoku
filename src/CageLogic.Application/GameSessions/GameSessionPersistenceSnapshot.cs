@@ -92,7 +92,8 @@ public sealed class GameSessionPersistenceMapper
 
 	public GameSessionPersistenceSnapshot Deserialize(string json)
 	{
-		ArgumentException.ThrowIfNullOrWhiteSpace(json);
+		if (string.IsNullOrWhiteSpace(json))
+			throw new InvalidDataException("The saved session snapshot is empty.");
 		try
 		{
 			return JsonSerializer.Deserialize<GameSessionPersistenceSnapshot>(json, JsonOptions)
@@ -183,7 +184,10 @@ public sealed class GameSessionPersistenceMapper
 		{
 			if (cage is null || cage.Positions is null)
 				throw new InvalidDataException("The saved puzzle contains an incomplete cage.");
-			return new CageDefinition(cage.TargetSum, cage.Positions.Select(ToPuzzlePosition));
+			return new CageDefinition(cage.TargetSum, cage.Positions.Select(position =>
+				position is null
+					? throw new InvalidDataException("The saved puzzle contains an incomplete cage position.")
+					: ToPuzzlePosition(position)));
 		}).ToArray();
 		var validation = new PuzzleStructureValidator().Validate(new PuzzleDefinition(givens, cages));
 		if (!validation.IsValid)

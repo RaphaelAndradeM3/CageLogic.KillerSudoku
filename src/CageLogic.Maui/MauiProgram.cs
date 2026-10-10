@@ -23,10 +23,8 @@ public static class MauiProgram
 	public static MauiApp CreateMauiApp()
 	{
 		var builder = MauiApp.CreateBuilder();
-		Directory.CreateDirectory(FileSystem.AppDataDirectory);
 		var progressionConnectionFactory = new SqliteConnectionFactory(
 			Path.Combine(FileSystem.AppDataDirectory, "progression.db"));
-		new SqliteSchemaMigrator(progressionConnectionFactory).Migrate();
 		builder.Logging.ClearProviders();
 		builder.Logging.AddProvider(SerilogLoggingConfiguration.CreateLoggerProvider(new LoggingOptions
 		{

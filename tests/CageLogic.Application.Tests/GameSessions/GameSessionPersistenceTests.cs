@@ -86,6 +86,17 @@ public sealed class GameSessionPersistenceTests
 		Assert.Throws<InvalidDataException>(() => mapper.Restore(snapshot with { Solution = [.. snapshot.Solution.Skip(1)] }));
 		Assert.Throws<InvalidDataException>(() => mapper.Restore(snapshot with { CurrentValues = new int?[80] }));
 		Assert.Throws<InvalidDataException>(() => mapper.Restore(snapshot with { ErrorCount = -1 }));
+		Assert.Throws<InvalidDataException>(() => mapper.Restore(snapshot with
+		{
+			Cages = [snapshot.Cages[0] with { Positions = [null!] }, .. snapshot.Cages.Skip(1)]
+		}));
+	}
+
+	[TestCase("")]
+	[TestCase("   ")]
+	public void Deserialize_RejectsEmptySnapshotAsInvalidData(string json)
+	{
+		Assert.Throws<InvalidDataException>(() => new GameSessionPersistenceMapper().Deserialize(json));
 	}
 
 	[Test]

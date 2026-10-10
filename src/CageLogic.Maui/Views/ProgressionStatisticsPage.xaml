@@ -11,8 +11,8 @@
                    SemanticProperties.Description="Resumo das estatísticas locais" />
             <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
                                SemanticProperties.Description="Carregando estatísticas" />
-            <Label Text="{Binding StatusMessage}" TextColor="#B42318"
-                   SemanticProperties.Description="Estado do carregamento das estatísticas" />
+            <Label Text="{Binding StatusMessage}"
+                   TextColor="{AppThemeBinding Light=#B42318, Dark=#FF9D92}" />
             <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                   RowSpacing="14" ColumnSpacing="24">
                 <Label Text="Partidas iniciadas" FontAttributes="Bold" />

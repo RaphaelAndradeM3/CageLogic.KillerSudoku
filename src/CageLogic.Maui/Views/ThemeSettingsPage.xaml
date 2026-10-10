@@ -17,8 +17,7 @@
                     SemanticProperties.Hint="Aplica e salva o tema claro" />
             <Button Text="{Binding DarkButtonText}" Command="{Binding UseDarkThemeCommand}"
                     SemanticProperties.Hint="Aplica e salva o tema escuro" />
-            <Label Text="{Binding StatusMessage}"
-                   SemanticProperties.Description="Estado do salvamento da preferência de tema" />
+            <Label Text="{Binding StatusMessage}" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

@@ -21,6 +21,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	private readonly IDispatcherTimer? _elapsedTimer;
 	private long _lastBoardRevision;
 	private int _pendingWrites;
+	private string _confirmedPersistenceStatus;
 	private bool _disposed;
 
 	[ObservableProperty]
@@ -62,7 +63,8 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		_logger = logger;
 		ViewState = _session.ViewState;
 		IsHintPending = _session.IsHintPending;
-		PersistenceStatus = sessionStore.IsPersisted ? "Salvo." : "Falha ao salvar.";
+		_confirmedPersistenceStatus = sessionStore.IsPersisted ? "Salvo." : "Falha ao salvar.";
+		PersistenceStatus = _confirmedPersistenceStatus;
 		if (!sessionStore.IsPersisted)
 			StatusMessage = "O primeiro salvamento falhou. A partida continua na memória, mas ainda não pode ser retomada após fechar o aplicativo.";
 		_elapsedTimer = Microsoft.Maui.Controls.Application.Current?.Dispatcher.CreateTimer();
@@ -269,6 +271,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		try
 		{
 			var savedCurrent = await _progressQueue.PersistCurrentAsync(cancellationToken).ConfigureAwait(false);
+			await MainThread.InvokeOnMainThreadAsync(() => SetConfirmedPersistenceStatus(savedCurrent.IsConfirmed));
 			if (!savedCurrent.IsConfirmed)
 			{
 				await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "A conclusão não foi salva. A sessão continua na memória; tente salvar novamente.");
@@ -283,6 +286,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 				_sessionStore.UpdateRecord(result.Record);
 				await MainThread.InvokeOnMainThreadAsync(() =>
 				{
+					SetConfirmedPersistenceStatus(isSaved: true);
 					IsCompletionPersisted = true;
 					StatusMessage = string.Empty;
 					PublishState();
@@ -292,6 +296,8 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 
 			await MainThread.InvokeOnMainThreadAsync(() =>
 			{
+				if (result.Completion.Status == SessionCompletionStatus.Completed)
+					SetConfirmedPersistenceStatus(isSaved: false);
 				IsCompletionPersisted = false;
 				StatusMessage = result.Completion.Status switch
 				{
@@ -325,6 +331,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		try
 		{
 			var savedCurrent = await _progressQueue.PersistCurrentAsync(cancellationToken).ConfigureAwait(false);
+			await MainThread.InvokeOnMainThreadAsync(() => SetConfirmedPersistenceStatus(savedCurrent.IsConfirmed));
 			if (!savedCurrent.IsConfirmed)
 			{
 				await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "Não foi possível salvar o abandono. A partida continua disponível na memória.");
@@ -336,10 +343,12 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 				.ConfigureAwait(false);
 			if (!result.Persistence.IsSaved)
 			{
+				await MainThread.InvokeOnMainThreadAsync(() => SetConfirmedPersistenceStatus(isSaved: false));
 				await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "Não foi possível abandonar a partida. Tente novamente.");
 				return;
 			}
 
+			await MainThread.InvokeOnMainThreadAsync(() => SetConfirmedPersistenceStatus(isSaved: true));
 			_sessionStore.UpdateRecord(result.Record);
 			_sessionStore.Clear();
 			await Shell.Current.GoToAsync("//home");
@@ -377,7 +386,8 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 			{
 				if (result.Applied)
 				{
-					PersistenceStatus = result.IsConfirmed ? (_pendingWrites > 1 ? "Salvando..." : "Salvo.") : "Falha ao salvar.";
+					SetConfirmedPersistenceStatus(result.IsConfirmed);
+					PersistenceStatus = result.IsConfirmed && _pendingWrites > 1 ? "Salvando..." : _confirmedPersistenceStatus;
 					StatusMessage = result.IsConfirmed
 						? (_pendingWrites > 1 ? "Salvando..." : string.Empty)
 						: "Alteração ainda não salva. A partida continua na memória; tente outra alteração para repetir o salvamento.";
@@ -397,9 +407,11 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		try
 		{
 			var result = await _progressQueue.PersistCurrentAsync(cancellationToken).ConfigureAwait(false);
-			await MainThread.InvokeOnMainThreadAsync(() => PersistenceStatus = result.IsConfirmed ? "Salvo." : "Falha ao salvar.");
 			await MainThread.InvokeOnMainThreadAsync(() =>
-				StatusMessage = result.IsConfirmed ? string.Empty : "O salvamento falhou. Alterações recentes ainda não estão salvas.");
+			{
+				SetConfirmedPersistenceStatus(result.IsConfirmed);
+				StatusMessage = result.IsConfirmed ? string.Empty : "O salvamento falhou. Alterações recentes ainda não estão salvas.";
+			});
 		}
 		finally
 		{
@@ -419,7 +431,19 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	{
 		_pendingWrites = Math.Max(0, _pendingWrites - 1);
 		IsSaving = _pendingWrites > 0;
+		if (!IsSaving)
+		{
+			PersistenceStatus = _confirmedPersistenceStatus;
+			if (StatusMessage == "Salvando...")
+				StatusMessage = string.Empty;
+		}
 	});
+
+	private void SetConfirmedPersistenceStatus(bool isSaved)
+	{
+		_confirmedPersistenceStatus = isSaved ? "Salvo." : "Falha ao salvar.";
+		PersistenceStatus = _pendingWrites > 1 && isSaved ? "Salvando..." : _confirmedPersistenceStatus;
+	}
 
 	private void OnSessionViewStateChanged(object? sender, EventArgs eventArgs) =>
 		MainThread.BeginInvokeOnMainThread(() =>

@@ -29,6 +29,30 @@ public sealed class CreateGameProgressUseCase
 		GeneratedPuzzle generatedPuzzle,
 		CancellationToken cancellationToken = default)
 	{
+		var pending = CreatePending(generatedPuzzle, cancellationToken);
+		var saved = await _store.CreateAsync(pending.SavedSession, CancellationToken.None).ConfigureAwait(false);
+		return new CreateGameProgressResult(pending.Session, pending.Record, saved);
+	}
+
+	/// <summary>Atomically archives the current active row and stores the replacement session.</summary>
+	public async Task<CreateGameProgressResult> ReplaceActiveAsync(
+		GeneratedPuzzle generatedPuzzle,
+		string? replacedSessionKey,
+		CancellationToken cancellationToken = default)
+	{
+		var pending = CreatePending(generatedPuzzle, cancellationToken);
+		var saved = await _store.ReplaceActiveAsync(
+			pending.SavedSession,
+			replacedSessionKey,
+			_timeProvider.GetUtcNow(),
+			CancellationToken.None).ConfigureAwait(false);
+		return new CreateGameProgressResult(pending.Session, pending.Record, saved);
+	}
+
+	private (GameSession Session, GameProgressRecord Record, SavedGameSession SavedSession) CreatePending(
+		GeneratedPuzzle generatedPuzzle,
+		CancellationToken cancellationToken)
+	{
 		ArgumentNullException.ThrowIfNull(generatedPuzzle);
 		cancellationToken.ThrowIfCancellationRequested();
 
@@ -44,10 +68,8 @@ public sealed class CreateGameProgressUseCase
 			0,
 			0);
 		var snapshot = _mapper.Capture(session);
-		var saved = await _store.CreateAsync(
-			new SavedGameSession(record, snapshot.Version, _mapper.Serialize(snapshot)),
-			CancellationToken.None).ConfigureAwait(false);
-		return new CreateGameProgressResult(session, record, saved);
+		var savedSession = new SavedGameSession(record, snapshot.Version, _mapper.Serialize(snapshot));
+		return (session, record, savedSession);
 	}
 }
 
