@@ -32,8 +32,29 @@
                 <Label Text="Salvando..." TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" VerticalOptions="Center"
                        SemanticProperties.Description="A alteração está sendo salva e ainda não foi confirmada." />
             </HorizontalStackLayout>
+            <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasAvailableHint}">
+                <Label Text="{Binding HintTechniqueName}" FontSize="16" FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light=#25354A, Dark=#E4EAF2}"
+                       SemanticProperties.HeadingLevel="Level2" />
+                <Label Grid.Column="1" Text="{Binding HintProgress}" FontSize="12" VerticalOptions="Center"
+                       TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" />
+            </Grid>
             <Label Text="{Binding HintMessage}" TextColor="{AppThemeBinding Light=#334F70, Dark=#BCD7F5}" FontSize="14"
-                   SemanticProperties.Description="Explicação da dica" />
+                   SemanticProperties.Description="Explicação e ação da dica" />
+            <Border Stroke="{AppThemeBinding Light=#B8C9DD, Dark=#52677F}"
+                    BackgroundColor="{AppThemeBinding Light=#EEF4FA, Dark=#263649}"
+                    StrokeShape="RoundRectangle 12" Padding="12" IsVisible="{Binding HasHintCalculation}"
+                    SemanticProperties.Description="Cálculo do somatório relacionado à dica">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="{Binding HintCalculationTitle}" FontSize="11" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" />
+                    <Label Text="{Binding HintCalculationFormula}" FontSize="20" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#245DA0, Dark=#83B6FF}"
+                           SemanticProperties.HeadingLevel="Level3" />
+                    <Label Text="{Binding HintCalculationDescription}" FontSize="13"
+                           TextColor="{AppThemeBinding Light=#334F70, Dark=#BCD7F5}" />
+                </VerticalStackLayout>
+            </Border>
 
             <HorizontalStackLayout Spacing="8" VerticalOptions="Center" IsVisible="{Binding IsHintPending}">
                 <ActivityIndicator IsRunning="{Binding IsHintPending}" IsVisible="{Binding IsHintPending}" Color="#315F9D" />
@@ -53,8 +74,8 @@
                 <Button Grid.Column="1" Text="Refazer" Command="{Binding RedoCommand}" IsEnabled="{Binding ViewState.CanRedo}" />
                 <Button Grid.Column="2" Text="{Binding PauseButtonText}" Command="{Binding TogglePauseCommand}"
                         SemanticProperties.Hint="Pausar ou retomar explicitamente o cronômetro ativo" />
-                <Button Grid.Column="3" Text="Pedir dica" Command="{Binding RequestHintCommand}"
-                        SemanticProperties.Hint="Mostra o próximo nível de explicação lógica" />
+                <Button Grid.Column="3" Text="{Binding HintButtonText}" Command="{Binding RequestHintCommand}"
+                        SemanticProperties.Hint="Avança a explicação, mostra as células e o somatório, revela a ação e depois procura outra dica" />
             </Grid>
 
             <Label Text="Digite um número" FontSize="15" FontAttributes="Bold"

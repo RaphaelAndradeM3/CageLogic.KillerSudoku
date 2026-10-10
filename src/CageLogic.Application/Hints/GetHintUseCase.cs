@@ -68,7 +68,17 @@ public sealed class GetHintUseCase
 
         cancellationToken.ThrowIfCancellationRequested();
         var state = LogicalState.Create(board);
-        var step = _analyzer.FindNextStep(state, cancellationToken: cancellationToken);
+        var excludedTechniques = request.ExcludedTechniques.ToHashSet();
+        var allowedTechniques = excludedTechniques.Count == 0
+            ? null
+            : Enum.GetValues<LogicalTechniqueId>().Where(technique => !excludedTechniques.Contains(technique)).ToHashSet();
+        var step = _analyzer.FindNextStep(state, allowedTechniques, cancellationToken);
+        if (step is null && excludedTechniques.Count > 0)
+        {
+            // If this snapshot has no different technique, cycle back to its first safe deduction.
+            step = _analyzer.FindNextStep(state, cancellationToken: cancellationToken);
+        }
+
         if (step is null)
         {
             return Terminal(revision, HintStatus.NoSafeHint, request.Level);

@@ -1,5 +1,6 @@
 using CageLogic.Domain.Board;
 using CageLogic.Domain.Cages;
+using CageLogic.Domain.LogicalSteps;
 
 namespace CageLogic.Application.Hints;
 
@@ -10,7 +11,8 @@ public sealed class HintRequest
         HintPuzzleContext puzzleContext,
         SudokuBoard currentBoard,
         HintLevel level,
-        long boardRevision)
+        long boardRevision,
+        IEnumerable<LogicalTechniqueId>? excludedTechniques = null)
     {
         ArgumentNullException.ThrowIfNull(puzzleContext);
         ArgumentNullException.ThrowIfNull(currentBoard);
@@ -33,6 +35,13 @@ public sealed class HintRequest
         CurrentBoard = currentBoard;
         Level = level;
         BoardRevision = boardRevision;
+        var excluded = (excludedTechniques ?? Array.Empty<LogicalTechniqueId>()).Distinct().ToArray();
+        if (excluded.Any(technique => !Enum.IsDefined(technique)))
+        {
+            throw new ArgumentOutOfRangeException(nameof(excludedTechniques), "Excluded techniques must be defined catalog identifiers.");
+        }
+
+        ExcludedTechniques = Array.AsReadOnly(excluded);
     }
 
     public HintPuzzleContext PuzzleContext { get; }
@@ -42,6 +51,9 @@ public sealed class HintRequest
     public HintLevel Level { get; }
 
     public long BoardRevision { get; }
+
+    /// <summary>Techniques already fully revealed for this unchanged board revision.</summary>
+    public IReadOnlyList<LogicalTechniqueId> ExcludedTechniques { get; }
 
     private static bool MatchesPuzzle(SudokuBoard board, HintPuzzleContext context)
     {
