@@ -7,8 +7,8 @@ rem The Android signing identity is created once under LOCALAPPDATA and reused.
 for %%I in ("%~dp0..") do set "ROOT=%%~fI"
 set "PROJECT=%ROOT%\src\CageLogic.Maui\CageLogic.Maui.csproj"
 set "PUBLISH_ROOT=%ROOT%\artifacts\publish"
-set "WINDOWS_OUT=%PUBLISH_ROOT%\windows"
-set "ANDROID_OUT=%PUBLISH_ROOT%\android"
+set "WINDOWS_OUT=%PUBLISH_ROOT%\windows\"
+set "ANDROID_OUT=%PUBLISH_ROOT%\android\"
 set "SIGNING_DIR=%LOCALAPPDATA%\CageLogic\KillerSudoku\signing"
 set "KEYSTORE=%SIGNING_DIR%\cagelogic-local-release.p12"
 set "PASSWORD_FILE=%SIGNING_DIR%\keystore-password.txt"
@@ -45,25 +45,25 @@ if errorlevel 1 goto publish_failed
 
 echo.
 echo [2/2] Publicando APK Android assinado...
-del /q "%ANDROID_OUT%\*.apk" 2>nul
-if exist "%ANDROID_OUT%\*.apk" (
+del /q "%ANDROID_OUT%*.apk" 2>nul
+if exist "%ANDROID_OUT%*.apk" (
     echo ERRO: nao foi possivel remover APKs antigos de "%ANDROID_OUT%".
     exit /b 1
 )
 dotnet publish "%PROJECT%" -f net10.0-android -c Release -p:AndroidKeyStore=true -p:AndroidPackageFormats=apk "-p:AndroidSigningKeyStore=%KEYSTORE%" -p:AndroidSigningKeyAlias=cagelogic "-p:AndroidSigningStorePass=file:%PASSWORD_FILE%" "-p:AndroidSigningKeyPass=file:%PASSWORD_FILE%" "-p:PublishDir=%ANDROID_OUT%"
 if errorlevel 1 goto publish_failed
 
-set "APK_FOUND="
-for %%F in ("%ANDROID_OUT%\*.apk") do if exist "%%~fF" set "APK_FOUND=%%~fF"
-if not defined APK_FOUND (
-    echo ERRO: a publicacao terminou, mas nenhum APK foi encontrado em "%ANDROID_OUT%".
+set "SIGNED_APK_FOUND="
+for %%F in ("%ANDROID_OUT%*-Signed.apk") do if exist "%%~fF" set "SIGNED_APK_FOUND=%%~fF"
+if not defined SIGNED_APK_FOUND (
+    echo ERRO: a publicacao terminou, mas nenhum APK assinado foi encontrado em "%ANDROID_OUT%".
     exit /b 1
 )
 
 echo.
 echo Publicacao concluida.
 echo Windows: "%WINDOWS_OUT%"
-echo APK Android assinado: "%APK_FOUND%"
+echo APK Android assinado: "%SIGNED_APK_FOUND%"
 echo Chave de assinatura local mantida em: "%SIGNING_DIR%"
 echo Copie o APK para o celular e autorize a instalacao dessa origem, se solicitado.
 exit /b 0
