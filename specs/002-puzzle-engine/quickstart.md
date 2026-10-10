@@ -1,13 +1,13 @@
 # Quickstart de validação — Motor de puzzles
 
-Este guia valida a biblioteca e os projetos de teste da solução atual. A solution e os projetos Domain/Application já existem. Não há host MAUI nesta solution; builds de plataforma dependem da criação do host e da configuração dos workloads Windows/Android.
+Este guia valida o motor de puzzles e os projetos de teste da feature 002. A solution atual também inclui o host MAUI criado na feature 004, em `src/CageLogic.Maui/CageLogic.Maui.csproj`; os builds de plataforma dependem dos workloads Windows/Android instalados.
 
 ## Pré-requisitos
 
 - SDK .NET 10 instalado.
-- Repositório na branch `002-puzzle-engine`.
+- Para reproduzir a implementação original, use a branch/commit da feature 002; os comandos também podem ser executados em branches posteriores.
 - Pacotes NuGet dos projetos de teste restauráveis no ambiente.
-- Para execução do futuro host móvel: workloads MAUI e SDKs correspondentes; não são necessários para validar as bibliotecas net10.0.
+- Para builds do host MAUI atual: workloads MAUI e SDKs correspondentes; não são necessários para validar os projetos de biblioteca e seus testes.
 
 ## Build e suíte
 
