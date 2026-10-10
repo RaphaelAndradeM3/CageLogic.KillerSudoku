@@ -67,6 +67,7 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 
 	[ObservableProperty]
 	public partial bool IsHintPending { get; set; }
+	partial void OnIsHintPendingChanged(bool value) => OnPropertyChanged(nameof(HintButtonText));
 
 	[ObservableProperty]
 	public partial bool IsSaving { get; set; }

@@ -153,7 +153,13 @@ public sealed class GameSessionHintCoordinator
 
 						if (request.Level == HintLevel.Action)
 						{
-							_excludedTechniques.Add(techniqueId);
+							if (!_excludedTechniques.Add(techniqueId))
+							{
+								// The use case cycles back only after every available technique was excluded.
+								// Restart from the returned technique so the next request can advance again.
+								_excludedTechniques.Clear();
+								_excludedTechniques.Add(techniqueId);
+							}
 							_nextLevel = (int)HintLevel.Highlights;
 						}
 						else

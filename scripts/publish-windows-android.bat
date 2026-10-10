@@ -106,16 +106,32 @@ if exist "%KEYSTORE%" if not exist "%PASSWORD_FILE%" (
     exit /b 1
 )
 
+if not exist "%KEYSTORE%" if exist "%PASSWORD_FILE%" (
+    echo ERRO: o arquivo de senha existe, mas o keystore Android local esta ausente.
+    echo Restaure a pasta de assinatura de um backup; uma nova chave impediria atualizacoes do aplicativo instalado.
+    exit /b 1
+)
+if not exist "%KEYSTORE%" if exist "%KEY_PASSWORD_FILE%" (
+    echo ERRO: a senha da chave existe, mas o keystore Android local esta ausente.
+    echo Restaure a pasta de assinatura de um backup; uma nova chave impediria atualizacoes do aplicativo instalado.
+    exit /b 1
+)
+
 set "KEYTOOL="
-for /f "delims=" %%K in ('where.exe keytool.exe 2^>nul') do if not defined KEYTOOL set "KEYTOOL=%%K"
-if not defined KEYTOOL if defined JAVA_HOME if exist "%JAVA_HOME%\bin\keytool.exe" set "KEYTOOL=%JAVA_HOME%\bin\keytool.exe"
-if not defined KEYTOOL for /d %%J in ("%ProgramFiles(x86)%\Android\openjdk\jdk-*") do if exist "%%~fJ\bin\keytool.exe" set "KEYTOOL=%%~fJ\bin\keytool.exe"
+if not defined JAVA_HOME for /d %%J in ("%ProgramFiles%\Android\openjdk\jdk-*") do if exist "%%~fJ\bin\keytool.exe" set "JAVA_HOME=%%~fJ"
+if not defined JAVA_HOME for /d %%J in ("%ProgramFiles(x86)%\Android\openjdk\jdk-*") do if exist "%%~fJ\bin\keytool.exe" set "JAVA_HOME=%%~fJ"
+if defined JAVA_HOME if exist "%JAVA_HOME%\bin\keytool.exe" set "KEYTOOL=%JAVA_HOME%\bin\keytool.exe"
+if defined JAVA_HOME if not defined KEYTOOL (
+    echo ERRO: JAVA_HOME aponta para uma pasta sem keytool.exe: "%JAVA_HOME%".
+    echo Configure JAVA_HOME para o JDK usado pelo workload Android.
+    exit /b 1
+)
+if not defined KEYTOOL for /f "delims=" %%K in ('where.exe keytool.exe 2^>nul') do if not defined KEYTOOL set "KEYTOOL=%%K"
 if not defined KEYTOOL (
     echo ERRO: keytool nao encontrado. Instale/configure o JDK usado pelo workload Android.
     exit /b 1
 )
-for %%K in ("%KEYTOOL%") do set "JAVA_HOME=%%~dpK.."
-set "PATH=%JAVA_HOME%\bin;%PATH%"
+rem Keep an existing JAVA_HOME intact; do not replace it with a keytool found on PATH.
 
 set "APKSIGNER="
 if defined ANDROID_SDK_ROOT for /d %%B in ("%ANDROID_SDK_ROOT%\build-tools\*") do if exist "%%~fB\apksigner.bat" set "APKSIGNER=%%~fB\apksigner.bat"
