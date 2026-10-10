@@ -25,6 +25,72 @@ public sealed class GameSessionBoardTests
 	}
 
 	[Test]
+	public void CageIsSatisfiedOnlyWhenEveryCellIsFilledWithDistinctDigitsMatchingTarget()
+	{
+		var session = new GameSession(CreateGeneratedPuzzleWithTwoCellCage());
+		var cage = session.ViewState.Cages.Single(cage => cage.Positions.Count == 2);
+
+		Assert.That(cage.IsSatisfied, Is.False);
+
+		session.SelectCell(new CellPosition(0, 0));
+		session.EnterDigit(1);
+
+		Assert.That(session.ViewState.Cages.Single(cage => cage.Positions.Count == 2).IsSatisfied, Is.False);
+
+		session.SelectCell(new CellPosition(0, 1));
+		session.EnterDigit(2);
+
+		Assert.That(session.ViewState.Cages.Single(cage => cage.Positions.Count == 2).IsSatisfied, Is.True);
+
+		session.EnterDigit(3);
+
+		Assert.That(session.ViewState.Cages.Single(cage => cage.Positions.Count == 2).IsSatisfied, Is.False);
+	}
+
+	[Test]
+	public void CageCanBeSatisfiedByLocallyValidValuesThatDifferFromSolution()
+	{
+		var session = new GameSession(CreateGeneratedPuzzleWithTwoCellCage());
+
+		session.SelectCell(new CellPosition(0, 0));
+		session.EnterDigit(2);
+		session.SelectCell(new CellPosition(0, 1));
+		session.EnterDigit(1);
+
+		Assert.That(session.ViewState.IsBoardValid, Is.True);
+		Assert.That(session.ViewState.Cages.Single(cage => cage.Positions.Count == 2).IsSatisfied, Is.True);
+	}
+
+	[Test]
+	public void CageIsNotSatisfiedWhenTargetMatchesButDigitsRepeat()
+	{
+		var session = new GameSession(CreateGeneratedPuzzleWithCage(3));
+
+		foreach (var position in new[] { new CellPosition(0, 0), new CellPosition(0, 1), new CellPosition(0, 2) })
+		{
+			session.SelectCell(position);
+			session.EnterDigit(2);
+		}
+
+		var cage = session.ViewState.Cages.Single(cage => cage.Positions.Count == 3);
+		Assert.That(cage.TargetSum, Is.EqualTo(6));
+		Assert.That(cage.IsSatisfied, Is.False);
+	}
+
+	[Test]
+	public void CreateFromGeneratedPuzzle_ProjectsInitialGivensAsFixedCells()
+	{
+		var generatedPuzzle = GameSessionTestData.CreateGeneratedPuzzle(includeInitialGivens: true);
+		var session = new GameSession(generatedPuzzle);
+		var givens = session.ViewState.Cells.Where(cell => cell.IsGiven).ToArray();
+
+		Assert.That(givens, Has.Length.EqualTo(27));
+		Assert.That(givens.All(cell =>
+			cell.Value == generatedPuzzle.Solution.GetValue(cell.Position) && !cell.IsEditable), Is.True);
+		Assert.That(session.ViewState.Cells.Count(cell => cell.Value is null), Is.EqualTo(54));
+	}
+
+	[Test]
 	public void SelectCell_ChangesSelectionWithoutChangingBoardValues()
 	{
 		var session = new GameSession(CreateGeneratedPuzzle());
@@ -63,6 +129,42 @@ public sealed class GameSessionBoardTests
 					 from column in Enumerable.Range(0, 9)
 					 let value = values[row * 9 + column]
 					 select new CageDefinition(value, [new PuzzleDefinitionPosition(row, column)])).ToArray();
+		var validation = new PuzzleStructureValidator().Validate(new PuzzleDefinition(null, cages));
+		Assert.That(validation.IsValid, Is.True, string.Join("; ", validation.Issues.Select(issue => issue.Message)));
+		var puzzle = validation.Puzzle!;
+		var difficulty = new DifficultyAnalysisResult(
+			DifficultyAnalysisStatus.Classified,
+			DifficultyLevel.Easy,
+			catalogVersion: 1,
+			Array.Empty<LogicalTechniqueId>());
+		return new GeneratedPuzzle(
+			puzzle,
+			new SolutionGrid(values, puzzle),
+			difficulty,
+			DifficultyLevel.Easy,
+			seed: 1,
+			attempts: 1,
+			elapsed: TimeSpan.Zero);
+	}
+
+	private static GeneratedPuzzle CreateGeneratedPuzzleWithTwoCellCage()
+		=> CreateGeneratedPuzzleWithCage(2);
+
+	private static GeneratedPuzzle CreateGeneratedPuzzleWithCage(int cageCellCount)
+	{
+		var values = (from row in Enumerable.Range(0, 9)
+					  from column in Enumerable.Range(0, 9)
+					  select ((row * 3 + row / 3 + column) % 9) + 1).ToArray();
+		var cages = new List<CageDefinition>
+		{
+			new(values.Take(cageCellCount).Sum(), Enumerable.Range(0, cageCellCount)
+				.Select(column => new PuzzleDefinitionPosition(0, column)))
+		};
+		cages.AddRange(from row in Enumerable.Range(0, 9)
+					   from column in Enumerable.Range(0, 9)
+					   where row != 0 || column >= cageCellCount
+					   let value = values[row * 9 + column]
+					   select new CageDefinition(value, [new PuzzleDefinitionPosition(row, column)]));
 		var validation = new PuzzleStructureValidator().Validate(new PuzzleDefinition(null, cages));
 		Assert.That(validation.IsValid, Is.True, string.Join("; ", validation.Issues.Select(issue => issue.Message)));
 		var puzzle = validation.Puzzle!;

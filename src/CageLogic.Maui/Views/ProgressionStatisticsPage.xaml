@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="CageLogic.Maui.Views.ProgressionStatisticsPage"
+             Title="Estatísticas">
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="18" MaximumWidthRequest="620" HorizontalOptions="Center">
+            <Label Text="Seu progresso" FontSize="30" FontAttributes="Bold"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Acompanhe as partidas registradas neste dispositivo."
+                   SemanticProperties.Description="Resumo das estatísticas locais" />
+            <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}"
+                               SemanticProperties.Description="Carregando estatísticas" />
+            <Label Text="{Binding StatusMessage}"
+                   TextColor="{AppThemeBinding Light=#B42318, Dark=#FF9D92}" />
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                  RowSpacing="14" ColumnSpacing="24">
+                <Label Text="Partidas iniciadas" FontAttributes="Bold" />
+                <Label Grid.Column="1" Text="{Binding Statistics.StartedCount}" AutomationProperties.IsInAccessibleTree="True" />
+                <Label Grid.Row="1" Text="Partidas concluídas" FontAttributes="Bold" />
+                <Label Grid.Row="1" Grid.Column="1" Text="{Binding Statistics.CompletedCount}" />
+                <Label Grid.Row="2" Text="Tempo médio concluído" FontAttributes="Bold" />
+                <Label Grid.Row="2" Grid.Column="1" Text="{Binding AverageCompletedTimeText}" />
+                <Label Grid.Row="3" Text="Melhor tempo" FontAttributes="Bold" />
+                <Label Grid.Row="3" Grid.Column="1" Text="{Binding BestCompletedTimeText}" />
+                <Label Grid.Row="4" Text="Jogadas conflitantes" FontAttributes="Bold" />
+                <Label Grid.Row="4" Grid.Column="1" Text="{Binding Statistics.TotalErrors}" />
+                <Label Grid.Row="5" Text="Níveis de dica exibidos" FontAttributes="Bold" />
+                <Label Grid.Row="5" Grid.Column="1" Text="{Binding Statistics.TotalHints}" />
+            </Grid>
+            <Label Text="Ainda não há partidas concluídas. Os tempos aparecerão após concluir uma partida."
+                   IsVisible="{Binding HasNoCompletedGames}"
+                   SemanticProperties.Description="Não há tempos de partidas concluídas no momento." />
+            <Button Text="Atualizar" Command="{Binding RefreshCommand}"
+                    SemanticProperties.Hint="Recarrega as estatísticas salvas neste dispositivo" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

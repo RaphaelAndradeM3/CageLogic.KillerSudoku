@@ -3,32 +3,41 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:controls="clr-namespace:CageLogic.Maui.Controls"
              x:Class="CageLogic.Maui.Views.GamePage"
-             Title="Partida"
-             BackgroundColor="#F5F6F8">
+             Title="Partida">
     <ScrollView>
         <VerticalStackLayout Padding="12,10,12,20" Spacing="10" MaximumWidthRequest="620" HorizontalOptions="Center">
             <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
                 <VerticalStackLayout Spacing="2">
-                    <Label Text="Killer Sudoku" FontSize="22" FontAttributes="Bold" TextColor="#14243A"
+                    <Label Text="Killer Sudoku" FontSize="22" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#14243A, Dark=#F3F6FA}"
                            SemanticProperties.HeadingLevel="Level1" />
-                    <Label Text="{Binding DifficultyLabel, StringFormat='Dificuldade: {0}'}" FontSize="13" TextColor="#526174" />
-                    <Label Text="{Binding ViewState.ActiveElapsed, StringFormat='Tempo ativo: {0:hh\\:mm\\:ss}'}" FontSize="13" TextColor="#526174" />
+                    <Label Text="{Binding DifficultyLabel, StringFormat='Dificuldade: {0}'}" FontSize="13" TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" />
+                    <Label Text="{Binding ViewState.ActiveElapsed, StringFormat='Tempo ativo: {0:hh\\:mm\\:ss}'}" FontSize="13" TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" />
                 </VerticalStackLayout>
-                <Button Grid.Column="1" Text="Voltar" Clicked="OnBackClicked" BackgroundColor="#E8EDF4" TextColor="#25354A"
+                <Button Grid.Column="1" Text="Voltar" Clicked="OnBackClicked"
+                        BackgroundColor="{AppThemeBinding Light=#E8EDF4, Dark=#364557}"
+                        TextColor="{AppThemeBinding Light=#25354A, Dark=#F3F6FA}"
                         SemanticProperties.Hint="Volta à seleção de dificuldade" />
             </Grid>
 
             <controls:KillerSudokuBoardView x:Name="BoardView" AutomationId="KillerSudokuBoard"
-                                             MaximumWidthRequest="560" HorizontalOptions="Center" />
+                                             MaximumWidthRequest="560" HorizontalOptions="Fill" />
 
-            <Label Text="{Binding StatusMessage}" TextColor="#9A3D35" FontSize="13"
+            <Label Text="{Binding StatusMessage}" TextColor="{AppThemeBinding Light=#9A3D35, Dark=#FF9D92}" FontSize="13"
                    SemanticProperties.Description="Estado da entrada" />
-            <Label Text="{Binding HintMessage}" TextColor="#334F70" FontSize="14"
+            <Label Text="{Binding PersistenceStatus}" TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" FontSize="12"
+                   SemanticProperties.Description="Estado do salvamento local da partida" />
+            <HorizontalStackLayout Spacing="8" IsVisible="{Binding IsSaving}">
+                <ActivityIndicator IsRunning="{Binding IsSaving}" Color="#315F9D" />
+                <Label Text="Salvando..." TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" VerticalOptions="Center"
+                       SemanticProperties.Description="A alteração está sendo salva e ainda não foi confirmada." />
+            </HorizontalStackLayout>
+            <Label Text="{Binding HintMessage}" TextColor="{AppThemeBinding Light=#334F70, Dark=#BCD7F5}" FontSize="14"
                    SemanticProperties.Description="Explicação da dica" />
 
             <HorizontalStackLayout Spacing="8" VerticalOptions="Center" IsVisible="{Binding IsHintPending}">
                 <ActivityIndicator IsRunning="{Binding IsHintPending}" IsVisible="{Binding IsHintPending}" Color="#315F9D" />
-                <Label Text="Calculando dica..." TextColor="#526174" VerticalOptions="Center"
+                <Label Text="Calculando dica..." TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" VerticalOptions="Center"
                        SemanticProperties.Description="Uma dica está sendo calculada; a edição do tabuleiro continua disponível." />
             </HorizontalStackLayout>
 
@@ -48,7 +57,8 @@
                         SemanticProperties.Hint="Mostra o próximo nível de explicação lógica" />
             </Grid>
 
-            <Label Text="Digite um número" FontSize="15" FontAttributes="Bold" TextColor="#25354A"
+            <Label Text="Digite um número" FontSize="15" FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light=#25354A, Dark=#E4EAF2}"
                    SemanticProperties.HeadingLevel="Level2" />
             <Grid RowDefinitions="*,*,*" ColumnDefinitions="*,*,*" RowSpacing="6" ColumnSpacing="6">
                 <Button Text="1" Clicked="OnDigitClicked" AutomationId="Digit1" />
@@ -63,14 +73,21 @@
             </Grid>
             <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
                 <Button Text="Apagar célula selecionada" Command="{Binding ClearSelectedCommand}"
-                        BackgroundColor="#E8EDF4" TextColor="#25354A"
+                        BackgroundColor="{AppThemeBinding Light=#E8EDF4, Dark=#364557}"
+                        TextColor="{AppThemeBinding Light=#25354A, Dark=#F3F6FA}"
                         SemanticProperties.Hint="Apaga a resposta ou as notas da célula selecionada" />
-                <Button Grid.Column="1" Text="Concluir partida" Command="{Binding CompleteCommand}"
-                        BackgroundColor="#DDEBDD" TextColor="#1D542A"
+                <Button Grid.Column="1" Text="{Binding CompleteButtonText}" Command="{Binding CompleteCommand}"
+                        BackgroundColor="{AppThemeBinding Light=#DDEBDD, Dark=#294638}"
+                        TextColor="{AppThemeBinding Light=#1D542A, Dark=#D7F5E1}"
                         SemanticProperties.Hint="Valida e conclui a partida quando a solução estiver correta" />
             </Grid>
+            <Button Text="Abandonar partida" Clicked="OnAbandonClicked"
+                    BackgroundColor="{AppThemeBinding Light=#F4E1DF, Dark=#512E32}"
+                    TextColor="{AppThemeBinding Light=#782F2A, Dark=#FFD8D4}"
+                    SemanticProperties.Hint="Pede confirmação e registra a partida como abandonada" />
             <Label Text="Use as setas para mover a seleção. Ctrl+Z desfaz e Ctrl+Y refaz. Conflitos e destaques de dica também são descritos para leitores de tela."
-                   FontSize="12" TextColor="#526174" SemanticProperties.Description="Instruções de teclado e acessibilidade" />
+                   FontSize="12" TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}"
+                   SemanticProperties.Description="Instruções de teclado e acessibilidade" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

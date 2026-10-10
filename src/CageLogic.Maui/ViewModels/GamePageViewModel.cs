@@ -1,5 +1,6 @@
 using CageLogic.Application.GameSessions;
 using CageLogic.Application.Hints;
+using CageLogic.Application.Progression;
 using CageLogic.Domain.Board;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,10 +13,15 @@ namespace CageLogic.Maui.ViewModels;
 public partial class GamePageViewModel : ObservableObject, IDisposable
 {
 	private readonly GameSession _session;
-	private readonly GameSessionCommandQueue _commandQueue;
+	private readonly GameSessionStore _sessionStore;
+	private readonly GameProgressCommandQueue _progressQueue;
+	private readonly CompleteGameProgressUseCase _completeGame;
+	private readonly AbandonGameProgressUseCase _abandonGame;
 	private readonly ILogger<GamePageViewModel> _logger;
 	private readonly IDispatcherTimer? _elapsedTimer;
 	private long _lastBoardRevision;
+	private int _pendingWrites;
+	private string _confirmedPersistenceStatus;
 	private bool _disposed;
 
 	[ObservableProperty]
@@ -25,22 +31,42 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	public partial string StatusMessage { get; set; } = string.Empty;
 
 	[ObservableProperty]
+	public partial string PersistenceStatus { get; set; } = string.Empty;
+
+	[ObservableProperty]
 	public partial string HintMessage { get; set; } = string.Empty;
 
 	[ObservableProperty]
 	public partial bool IsHintPending { get; set; }
 
-	public GamePageViewModel(GameSessionStore sessionStore, GameSessionCommandQueue commandQueue, ILogger<GamePageViewModel> logger)
+	[ObservableProperty]
+	public partial bool IsSaving { get; set; }
+
+	[ObservableProperty]
+	public partial bool IsCompletionPersisted { get; set; }
+
+	public GamePageViewModel(
+		GameSessionStore sessionStore,
+		CompleteGameProgressUseCase completeGame,
+		AbandonGameProgressUseCase abandonGame,
+		ILogger<GamePageViewModel> logger)
 	{
 		ArgumentNullException.ThrowIfNull(sessionStore);
-		ArgumentNullException.ThrowIfNull(commandQueue);
+		ArgumentNullException.ThrowIfNull(completeGame);
+		ArgumentNullException.ThrowIfNull(abandonGame);
 		ArgumentNullException.ThrowIfNull(logger);
-		_commandQueue = commandQueue;
-		_logger = logger;
+		_sessionStore = sessionStore;
 		_session = sessionStore.Current ?? throw new InvalidOperationException("A game session must be created before navigating to the board.");
+		_progressQueue = sessionStore.Commands ?? throw new InvalidOperationException("A persistence queue must be created before navigating to the board.");
+		_completeGame = completeGame;
+		_abandonGame = abandonGame;
+		_logger = logger;
 		ViewState = _session.ViewState;
 		IsHintPending = _session.IsHintPending;
-		_session.ViewStateChanged += OnSessionViewStateChanged;
+		_confirmedPersistenceStatus = sessionStore.IsPersisted ? "Salvo." : "Falha ao salvar.";
+		PersistenceStatus = _confirmedPersistenceStatus;
+		if (!sessionStore.IsPersisted)
+			StatusMessage = "O primeiro salvamento falhou. A partida continua na memória, mas ainda não pode ser retomada após fechar o aplicativo.";
 		_elapsedTimer = Microsoft.Maui.Controls.Application.Current?.Dispatcher.CreateTimer();
 		if (_elapsedTimer is not null)
 		{
@@ -48,11 +74,13 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 			_elapsedTimer.Tick += OnElapsedTimerTick;
 			_elapsedTimer.Start();
 		}
+		_session.ViewStateChanged += OnSessionViewStateChanged;
 	}
 
 	public string DifficultyLabel => ViewState.Difficulty.ToString();
 	public GameSession Session => _session;
 	public string PauseButtonText => ViewState.IsPaused ? "Retomar tempo" : "Pausar tempo";
+	public string CompleteButtonText => _session.Summary is null ? "Concluir partida" : "Tentar salvar conclusão";
 
 	public void SelectCell(CellPosition position)
 	{
@@ -71,11 +99,12 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 				return;
 			}
 
-			var applied = await _commandQueue.ExecuteAsync(
+			var result = await ExecutePersistedAsync(
 				() => _session.EnterDigit(position, intent.InputMode, digit), cancellationToken).ConfigureAwait(false);
 			await MainThread.InvokeOnMainThreadAsync(() =>
 			{
-				StatusMessage = applied ? string.Empty : "A célula selecionada não aceita essa alteração.";
+				if (!result.Applied && !IsSaving)
+					StatusMessage = "A célula selecionada não aceita essa alteração.";
 				PublishState();
 			});
 		}, cancellationToken).ConfigureAwait(false);
@@ -118,11 +147,17 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 	private async Task ClearSelectedCoreAsync(CancellationToken cancellationToken)
 	{
 		var intent = ViewState;
-		var cleared = intent.SelectedPosition is { } position && await _commandQueue.ExecuteAsync(
+		if (intent.SelectedPosition is not { } position)
+		{
+			StatusMessage = "Selecione uma célula antes de apagar.";
+			return;
+		}
+		var result = await ExecutePersistedAsync(
 			() => _session.ClearSelected(position, intent.InputMode), cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
-			StatusMessage = cleared ? string.Empty : "A célula selecionada não pode ser apagada neste modo.";
+			if (!result.Applied && !IsSaving)
+				StatusMessage = "A célula selecionada não pode ser apagada neste modo.";
 			PublishState();
 		});
 	}
@@ -133,60 +168,47 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 
 	private async Task AutoFillCandidatesCoreAsync(CancellationToken cancellationToken)
 	{
-		var changed = await _commandQueue.ExecuteAsync(_session.AutoFillCandidates, cancellationToken).ConfigureAwait(false);
+		var result = await ExecutePersistedAsync(_session.AutoFillCandidates, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
-			StatusMessage = changed ? "Candidatos preenchidos para as células vazias." : "Os candidatos já estavam atualizados.";
+			if (!result.Applied && !IsSaving)
+				StatusMessage = "Os candidatos já estavam atualizados.";
 			PublishState();
 		});
 	}
 
 	[RelayCommand(AllowConcurrentExecutions = false)]
 	private Task UndoAsync(CancellationToken cancellationToken) =>
-		ExecuteRecoverablyAsync(() => UndoCoreAsync(cancellationToken), cancellationToken);
+		ExecuteRecoverablyAsync(() => HistoryCoreAsync(undo: true, cancellationToken), cancellationToken);
 
-	private async Task UndoCoreAsync(CancellationToken cancellationToken)
+	[RelayCommand(AllowConcurrentExecutions = false)]
+	private Task RedoAsync(CancellationToken cancellationToken) =>
+		ExecuteRecoverablyAsync(() => HistoryCoreAsync(undo: false, cancellationToken), cancellationToken);
+
+	private async Task HistoryCoreAsync(bool undo, CancellationToken cancellationToken)
 	{
-		var undone = await _commandQueue.ExecuteAsync(_session.Undo, cancellationToken).ConfigureAwait(false);
+		var result = await ExecutePersistedAsync(undo ? _session.Undo : _session.Redo, cancellationToken).ConfigureAwait(false);
 		await MainThread.InvokeOnMainThreadAsync(() =>
 		{
-			StatusMessage = undone ? string.Empty : "Não há ação para desfazer.";
+			if (!result.Applied && !IsSaving)
+				StatusMessage = undo ? "Não há ação para desfazer." : "Não há ação para refazer.";
 			PublishState();
 		});
 	}
 
 	[RelayCommand(AllowConcurrentExecutions = false)]
-	private Task RedoAsync(CancellationToken cancellationToken) =>
-		ExecuteRecoverablyAsync(() => RedoCoreAsync(cancellationToken), cancellationToken);
-
-	private async Task RedoCoreAsync(CancellationToken cancellationToken)
-	{
-		var redone = await _commandQueue.ExecuteAsync(_session.Redo, cancellationToken).ConfigureAwait(false);
-		await MainThread.InvokeOnMainThreadAsync(() =>
-		{
-			StatusMessage = redone ? string.Empty : "Não há ação para refazer.";
-			PublishState();
-		});
-	}
-
-	[RelayCommand]
-	private void TogglePause()
-	{
-		try
+	private Task TogglePauseAsync(CancellationToken cancellationToken) =>
+		ExecuteRecoverablyAsync(async () =>
 		{
 			if (_session.IsPaused)
 				_session.Resume();
 			else
 				_session.Pause();
 			PublishState();
-		}
-		catch (Exception exception)
-		{
-			ReportUnexpectedFailure(exception);
-		}
-	}
+			await PersistCurrentAsync(cancellationToken).ConfigureAwait(false);
+		}, cancellationToken);
 
-	[RelayCommand]
+	[RelayCommand(AllowConcurrentExecutions = false)]
 	private async Task RequestHintAsync(CancellationToken cancellationToken)
 	{
 		await MainThread.InvokeOnMainThreadAsync(() =>
@@ -203,22 +225,12 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 				hint = null;
 			await MainThread.InvokeOnMainThreadAsync(() =>
 			{
-				if (hint is null)
-					HintMessage = string.Empty;
-				else
-				{
-					HintMessage = hint?.Status switch
-					{
-						HintStatus.Available => hint.Explanation ?? string.Empty,
-						HintStatus.NoSafeHint => "Não há uma dica segura para esta posição.",
-						HintStatus.InconsistentState => "Corrija os conflitos para pedir uma dica.",
-						HintStatus.PuzzleSolved => "O tabuleiro já está resolvido.",
-						HintStatus.ValueNotConfirmed => "Não foi possível confirmar esta ação.",
-						_ => string.Empty
-					};
-				}
+				HintMessage = hint is null ? string.Empty : FormatHint(hint);
 				PublishState();
 			});
+
+			if (hint?.Status == HintStatus.Available)
+				await PersistCurrentAsync(cancellationToken).ConfigureAwait(false);
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
 		{
@@ -227,11 +239,16 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 		}
 		catch (Exception exception)
 		{
-			_logger.LogError(exception, "Hint calculation failed for the active game session");
+			var correlationId = Guid.NewGuid().ToString("N");
+			_logger.LogError(
+				exception,
+				"Hint calculation failed for game session {SessionId} (CorrelationId {CorrelationId})",
+				_progressQueue.ActiveRecord.SessionId,
+				correlationId);
 			await MainThread.InvokeOnMainThreadAsync(() =>
 			{
 				HintMessage = string.Empty;
-				StatusMessage = "Não foi possível calcular a dica. Tente novamente.";
+				StatusMessage = $"Não foi possível calcular a dica. Tente novamente. Código: {correlationId}";
 			});
 		}
 		finally
@@ -250,19 +267,182 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 
 	private async Task CompleteCoreAsync(CancellationToken cancellationToken)
 	{
-		var result = await _commandQueue.ExecuteAsync(_session.TryComplete, cancellationToken).ConfigureAwait(false);
-		await MainThread.InvokeOnMainThreadAsync(() =>
+		await BeginWriteAsync();
+		try
 		{
-			StatusMessage = result.Status switch
+			var savedCurrent = await _progressQueue.PersistCurrentAsync(cancellationToken).ConfigureAwait(false);
+			await MainThread.InvokeOnMainThreadAsync(() => SetConfirmedPersistenceStatus(savedCurrent.IsConfirmed));
+			if (!savedCurrent.IsConfirmed)
 			{
-				SessionCompletionStatus.Completed => string.Empty,
-				SessionCompletionStatus.Incomplete => "Preencha todas as células antes de concluir.",
-				SessionCompletionStatus.ConflictingBoard => "Corrija os conflitos antes de concluir.",
-				SessionCompletionStatus.IncorrectSolution => "A solução não corresponde ao quebra-cabeça.",
-				_ => string.Empty
-			};
-			PublishState();
-		});
+				await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "A conclusão não foi salva. A sessão continua na memória; tente salvar novamente.");
+				return;
+			}
+
+			var result = await _progressQueue.ExecuteExclusiveAsync(
+				() => _completeGame.ExecuteAsync(_session, _progressQueue.ActiveRecord, cancellationToken), cancellationToken)
+				.ConfigureAwait(false);
+			if (result.Persistence?.IsSaved == true && result.Record is not null)
+			{
+				_sessionStore.UpdateRecord(result.Record);
+				await MainThread.InvokeOnMainThreadAsync(() =>
+				{
+					SetConfirmedPersistenceStatus(isSaved: true);
+					IsCompletionPersisted = true;
+					StatusMessage = string.Empty;
+					PublishState();
+				});
+				return;
+			}
+
+			await MainThread.InvokeOnMainThreadAsync(() =>
+			{
+				if (result.Completion.Status == SessionCompletionStatus.Completed)
+					SetConfirmedPersistenceStatus(isSaved: false);
+				IsCompletionPersisted = false;
+				StatusMessage = result.Completion.Status switch
+				{
+					SessionCompletionStatus.Incomplete => "Preencha todas as células antes de concluir.",
+					SessionCompletionStatus.ConflictingBoard => "Corrija os conflitos antes de concluir.",
+					SessionCompletionStatus.IncorrectSolution => "A solução não corresponde ao quebra-cabeça.",
+					SessionCompletionStatus.Completed => "A solução está correta, mas não foi possível salvar a conclusão. Tente novamente.",
+					_ => string.Empty
+				};
+				PublishState();
+			});
+		}
+		finally
+		{
+			await EndWriteAsync();
+		}
+	}
+
+	[RelayCommand(AllowConcurrentExecutions = false)]
+	private async Task AbandonAsync(CancellationToken cancellationToken)
+	{
+		var confirmed = await Shell.Current.DisplayAlertAsync(
+			"Abandonar partida?",
+			"A partida será registrada como abandonada e não poderá ser retomada.",
+			"Abandonar",
+			"Continuar jogando");
+		if (!confirmed)
+			return;
+
+		await BeginWriteAsync();
+		try
+		{
+			var savedCurrent = await _progressQueue.PersistCurrentAsync(cancellationToken).ConfigureAwait(false);
+			await MainThread.InvokeOnMainThreadAsync(() => SetConfirmedPersistenceStatus(savedCurrent.IsConfirmed));
+			if (!savedCurrent.IsConfirmed)
+			{
+				await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "Não foi possível salvar o abandono. A partida continua disponível na memória.");
+				return;
+			}
+
+			var result = await _progressQueue.ExecuteExclusiveAsync(
+				() => _abandonGame.ExecuteAsync(_session, _progressQueue.ActiveRecord, cancellationToken), cancellationToken)
+				.ConfigureAwait(false);
+			if (!result.Persistence.IsSaved)
+			{
+				await MainThread.InvokeOnMainThreadAsync(() => SetConfirmedPersistenceStatus(isSaved: false));
+				await MainThread.InvokeOnMainThreadAsync(() => StatusMessage = "Não foi possível abandonar a partida. Tente novamente.");
+				return;
+			}
+
+			await MainThread.InvokeOnMainThreadAsync(() => SetConfirmedPersistenceStatus(isSaved: true));
+			_sessionStore.UpdateRecord(result.Record);
+			_sessionStore.Clear();
+			await Shell.Current.GoToAsync("//home");
+		}
+		finally
+		{
+			await EndWriteAsync();
+		}
+	}
+
+	public async Task PersistOnPauseAsync()
+	{
+		if (_session.Summary is not null || _sessionStore.ActiveRecord?.Status != GameProgressStatus.Active)
+			return;
+		_session.PauseForBackground();
+		try
+		{
+			await PersistCurrentAsync(CancellationToken.None).ConfigureAwait(false);
+		}
+		catch (Exception exception)
+		{
+			ReportUnexpectedFailure(exception);
+		}
+	}
+
+	private async Task<GameProgressCommandResult> ExecutePersistedAsync(
+		Func<bool> mutation,
+		CancellationToken cancellationToken)
+	{
+		await BeginWriteAsync();
+		try
+		{
+			var result = await _progressQueue.ExecuteAsync(mutation, cancellationToken).ConfigureAwait(false);
+			await MainThread.InvokeOnMainThreadAsync(() =>
+			{
+				if (result.Applied)
+				{
+					SetConfirmedPersistenceStatus(result.IsConfirmed);
+					PersistenceStatus = result.IsConfirmed && _pendingWrites > 1 ? "Salvando..." : _confirmedPersistenceStatus;
+					StatusMessage = result.IsConfirmed
+						? (_pendingWrites > 1 ? "Salvando..." : string.Empty)
+						: "Alteração ainda não salva. A partida continua na memória; tente outra alteração para repetir o salvamento.";
+				}
+			});
+			return result;
+		}
+		finally
+		{
+			await EndWriteAsync();
+		}
+	}
+
+	private async Task PersistCurrentAsync(CancellationToken cancellationToken)
+	{
+		await BeginWriteAsync();
+		try
+		{
+			var result = await _progressQueue.PersistCurrentAsync(cancellationToken).ConfigureAwait(false);
+			await MainThread.InvokeOnMainThreadAsync(() =>
+			{
+				SetConfirmedPersistenceStatus(result.IsConfirmed);
+				StatusMessage = result.IsConfirmed ? string.Empty : "O salvamento falhou. Alterações recentes ainda não estão salvas.";
+			});
+		}
+		finally
+		{
+			await EndWriteAsync();
+		}
+	}
+
+	private async Task BeginWriteAsync() => await MainThread.InvokeOnMainThreadAsync(() =>
+	{
+		_pendingWrites++;
+		IsSaving = true;
+		PersistenceStatus = "Salvando...";
+		StatusMessage = "Salvando...";
+	});
+
+	private async Task EndWriteAsync() => await MainThread.InvokeOnMainThreadAsync(() =>
+	{
+		_pendingWrites = Math.Max(0, _pendingWrites - 1);
+		IsSaving = _pendingWrites > 0;
+		if (!IsSaving)
+		{
+			PersistenceStatus = _confirmedPersistenceStatus;
+			if (StatusMessage == "Salvando...")
+				StatusMessage = string.Empty;
+		}
+	});
+
+	private void SetConfirmedPersistenceStatus(bool isSaved)
+	{
+		_confirmedPersistenceStatus = isSaved ? "Salvo." : "Falha ao salvar.";
+		PersistenceStatus = _pendingWrites > 1 && isSaved ? "Salvando..." : _confirmedPersistenceStatus;
 	}
 
 	private void OnSessionViewStateChanged(object? sender, EventArgs eventArgs) =>
@@ -294,13 +474,18 @@ public partial class GamePageViewModel : ObservableObject, IDisposable
 			HintMessage = FormatHint(hint);
 		OnPropertyChanged(nameof(DifficultyLabel));
 		OnPropertyChanged(nameof(PauseButtonText));
+		OnPropertyChanged(nameof(CompleteButtonText));
 	}
 
 	public void ReportUnexpectedFailure(Exception exception)
 	{
 		ArgumentNullException.ThrowIfNull(exception);
 		var correlationId = Guid.NewGuid().ToString("N");
-		_logger.LogError(exception, "Recoverable game action failed (CorrelationId {CorrelationId})", correlationId);
+		_logger.LogError(
+			exception,
+			"Recoverable game action failed for game session {SessionId} (CorrelationId {CorrelationId})",
+			_progressQueue.ActiveRecord.SessionId,
+			correlationId);
 		MainThread.BeginInvokeOnMainThread(() =>
 			StatusMessage = $"Ocorreu um erro inesperado. Tente novamente. Código: {correlationId}");
 	}

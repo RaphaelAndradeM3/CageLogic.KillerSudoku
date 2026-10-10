@@ -194,3 +194,7 @@ Task T019: GameSessionCompletionTests.cs
 - [ ] T037 After T036, complete and record the remaining Windows and Android acceptance matrix in `specs/004-game-session/quickstart.md`, including TalkBack/Narrator operation of all 81 cells and controls, offline flows, lifecycle pause/resume, responsiveness during validation/candidate calculation/generation/hints, and device/OS p95 baselines (T030, T032, T033, T035; SC-001–SC-012; partial).
 
 **Phase 8 status (2026-10-08)**: T036 is complete and its deterministic queued-edit test passed. T037 and the related T030/T032/T033/T035 manual acceptance remain open: this environment has neither ADB/emulator executables nor an interactive Windows/accessibility tool, so the required real-device and screen-reader evidence cannot be captured here.
+
+## Phase 9: Cage sum feedback
+
+- [X] T038 Project each cage's local completion state from current values and target sum, highlight all cells of a satisfied cage in the board renderer, and cover incomplete, correct, repeated-digit, and solution-independent states in `GameSessionBoardTests.cs`, `GameSession.cs`, `GameSessionViewState.cs`, and `KillerSudokuBoardDrawable.cs` (FR-014, SC-013).

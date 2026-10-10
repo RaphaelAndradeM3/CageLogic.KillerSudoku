@@ -92,12 +92,14 @@ public sealed record GameSessionCellViewState
 
 public sealed record GameSessionCageViewState
 {
-	internal GameSessionCageViewState(int targetSum, IEnumerable<CellPosition> positions)
+	internal GameSessionCageViewState(int targetSum, IEnumerable<CellPosition> positions, bool isSatisfied)
 	{
 		TargetSum = targetSum;
 		Positions = new ReadOnlyCollection<CellPosition>(positions.ToArray());
+		IsSatisfied = isSatisfied;
 	}
 
 	public int TargetSum { get; }
 	public IReadOnlyList<CellPosition> Positions { get; }
+	public bool IsSatisfied { get; }
 }

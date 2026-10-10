@@ -42,6 +42,10 @@ Acumula `TimeSpan` ativo com timestamps monotônicos de `TimeProvider`. Mantém 
 
 Projeção criada somente depois que o board estiver completo, consistente e igual à `SolutionGrid`. Inclui dificuldade, tempo ativo e contagens. Um erro é cada ação que insere um valor que viola ao menos uma regra local; a mesma ação soma uma vez mesmo que produza vários conflitos, e correção posterior não decrementa. Undo/Redo não altera essa contagem histórica. Valor válido apenas divergente da solução não conta como erro. Uma dica é cada nível progressivo efetivamente exibido; `NoSafeHint`, cancelamentos e resultados obsoletos não contam.
 
+### CageCompletionProjection
+
+`GameSessionCageViewState` inclui `IsSatisfied`, calculado sobre os valores atuais da cage. O estado só é verdadeiro quando todas as posições estão preenchidas, os dígitos são distintos e a soma coincide com `TargetSum`. A interface usa esse estado para destacar visualmente todas as células da cage. A projeção nunca compara valores com `SolutionGrid`.
+
 ## Relações e ciclo de vida
 
 ```text

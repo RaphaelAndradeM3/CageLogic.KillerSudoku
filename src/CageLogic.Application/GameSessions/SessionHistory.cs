@@ -42,6 +42,21 @@ public sealed class SessionHistory
 		return change.After;
 	}
 
+	internal SessionHistoryState CaptureState() => new(
+		_undo.Select(change => new SessionHistoryEntry(change.Before, change.After)).ToArray(),
+		_redo.Select(change => new SessionHistoryEntry(change.Before, change.After)).ToArray());
+
+	internal void RestoreState(SessionHistoryState state)
+	{
+		ArgumentNullException.ThrowIfNull(state);
+		_undo.Clear();
+		_redo.Clear();
+		foreach (var change in state.Undo.Reverse())
+			_undo.Push(new SessionChange(change.Before, change.After));
+		foreach (var change in state.Redo.Reverse())
+			_redo.Push(new SessionChange(change.Before, change.After));
+	}
+
 	internal static bool BoardsHaveSameValues(SudokuBoard left, SudokuBoard right)
 	{
 		return left.Cells.SequenceEqual(right.Cells);
@@ -51,3 +66,9 @@ public sealed class SessionHistory
 }
 
 public sealed record SessionSnapshot(SudokuBoard Board, CandidateNotes Notes);
+
+internal sealed record SessionHistoryEntry(SessionSnapshot Before, SessionSnapshot After);
+
+internal sealed record SessionHistoryState(
+	IReadOnlyList<SessionHistoryEntry> Undo,
+	IReadOnlyList<SessionHistoryEntry> Redo);

@@ -1,6 +1,7 @@
 using CageLogic.Application.Difficulty;
 using CageLogic.Application.Generation;
 using CageLogic.Application.Solving;
+using CageLogic.Domain.Board;
 using CageLogic.Domain.Cages;
 using CageLogic.Domain.LogicalSteps;
 using CageLogic.Domain.Puzzles;
@@ -11,13 +12,28 @@ namespace CageLogic.Application.Tests.Generation;
 public sealed class PuzzleGeneratorTests
 {
     [Test]
-    public void Generate_EasySeed_ReturnsUniquePuzzleWithoutGivens()
+    public void Generate_EasySeed_ReturnsUniquePuzzleWithBalancedInitialGivens()
     {
         var result = new PuzzleGenerator().Generate(Request(DifficultyLevel.Easy, seed: 20261005));
 
         Assert.That(result.IsSuccess, Is.True);
         var generated = result.GeneratedPuzzle!;
-        Assert.That(generated.Puzzle.Givens, Is.Empty);
+        Assert.That(generated.Puzzle.Givens, Has.Count.EqualTo(27));
+        Assert.That(generated.Puzzle.Givens.All(given =>
+            generated.Solution.GetValue(new CellPosition(given.Key.Row, given.Key.Column)) == given.Value), Is.True);
+        Assert.That(generated.Puzzle.Givens.Keys.GroupBy(position => position.Row).Select(group => group.Count()),
+            Is.All.EqualTo(3));
+        Assert.That(generated.Puzzle.Givens.Keys.GroupBy(position => position.Column).Select(group => group.Count()),
+            Is.All.EqualTo(3));
+        Assert.That(generated.Puzzle.Givens.Keys
+                .GroupBy(position => (position.Row / 3, position.Column / 3))
+                .Select(group => group.Count()),
+            Is.All.EqualTo(3));
+        Assert.That(generated.Puzzle.Cages.Any(cage => cage.Positions.Count > 1), Is.True,
+            "Easy must show connected multi-cell cages with their sum targets.");
+        Assert.That(generated.Puzzle.Cages.Any(cage => cage.TargetSum > 9), Is.True,
+            "Easy must include cage targets that represent sums, not only single-cell digits.");
+        Assert.That(generated.Puzzle.Cages.All(cage => cage.Positions.Count <= 4), Is.True);
         Assert.That(generated.Difficulty.Level, Is.EqualTo(DifficultyLevel.Easy));
         Assert.That(generated.Attempts, Is.EqualTo(1));
         Assert.That(new SudokuBoardValidator().Validate(generated.Solution.ToBoard(generated.Puzzle)).IsSolved, Is.True);
@@ -108,7 +124,7 @@ public sealed class PuzzleGeneratorTests
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.GeneratedPuzzle!.Difficulty.Level, Is.EqualTo(level));
         Assert.That(result.GeneratedPuzzle.Seed, Is.EqualTo(12345));
-        Assert.That(result.GeneratedPuzzle.Puzzle.Givens, Is.Empty);
+        Assert.That(result.GeneratedPuzzle.Puzzle.Givens, Has.Count.EqualTo(level == DifficultyLevel.Easy ? 27 : 0));
     }
 
     [Test]
@@ -120,6 +136,7 @@ public sealed class PuzzleGeneratorTests
 
         Assert.That(second.Solution.Values, Is.EqualTo(first.Solution.Values));
         Assert.That(CageSignature(second.Puzzle), Is.EqualTo(CageSignature(first.Puzzle)));
+        Assert.That(second.Puzzle.Givens, Is.EquivalentTo(first.Puzzle.Givens));
     }
 
     [Test]
@@ -243,6 +260,14 @@ public sealed class PuzzleGeneratorTests
             solution[position.Row * 9 + position.Column])), Is.True);
         Assert.That(cages.All(cage => cage.Positions.Select(position =>
             solution[position.Row * 9 + position.Column]).Distinct().Count() == cage.Positions.Count), Is.True);
+        if (level == DifficultyLevel.Easy)
+        {
+            Assert.That(cages.Any(cage => cage.Positions.Count > 1), Is.True,
+                "Easy partitions must contain connected multi-cell cages.");
+            Assert.That(cages.Any(cage => cage.TargetSum > 9), Is.True,
+                "Easy partitions must include visible arithmetic cage targets.");
+            Assert.That(cages.All(cage => cage.Positions.Count <= 4), Is.True);
+        }
     }
 
     [Test]
@@ -271,7 +296,7 @@ public sealed class PuzzleGeneratorTests
             .ExecuteAsync(Request(DifficultyLevel.Easy, seed: 56));
 
         Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.GeneratedPuzzle!.Puzzle.Givens, Is.Empty);
+        Assert.That(result.GeneratedPuzzle!.Puzzle.Givens, Has.Count.EqualTo(27));
         Assert.That(result.GeneratedPuzzle.Solution.Values, Has.Count.EqualTo(81));
     }
 

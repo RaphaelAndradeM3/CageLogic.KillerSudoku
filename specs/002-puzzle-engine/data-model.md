@@ -66,7 +66,7 @@ Seed igual, algoritmo/versão, pedido, catálogo e orçamento iguais devem perco
 
 | Tipo | Campos | Regras |
 |---|---|---|
-| `GeneratedPuzzle` | `ValidatedPuzzle`; `SolutionGrid`; `DifficultyAnalysisResult`; seed usada quando disponível; `Attempts` inteiro; `Elapsed` `TimeSpan` | Só existe depois de estrutura, unicidade e perfil pedido aprovados. Para o MVP, o `ValidatedPuzzle` gerado contém zero givens: todas as células estão vazias para o jogador e a solução permanece separada das pistas de cage. |
+| `GeneratedPuzzle` | `ValidatedPuzzle`; `SolutionGrid`; `DifficultyAnalysisResult`; seed usada quando disponível; `Attempts` inteiro; `Elapsed` `TimeSpan` | Só existe depois de estrutura, unicidade e perfil pedido aprovados. Puzzles Easy incluem 27 givens provenientes da solução, com três em cada linha, coluna e bloco 3×3; as demais células ficam vazias. A partição Easy usa cages conectadas de tamanhos variados até quatro células, e a interface exibe cada alvo no canto superior esquerdo da cage. A solução permanece separada. |
 | `PuzzleGenerationResult` | variante `Success(GeneratedPuzzle)` ou `Unavailable(reason, attempts, elapsed)` | `Unavailable` não inclui puzzle nem solução parcial e não troca a dificuldade pedida. Só representa esgotamento do orçamento. Cancelamento do chamador propaga `OperationCanceledException`, não é variante do resultado. Se cancelamento do chamador e deadline ocorrerem juntos, cancelamento do chamador prevalece. |
 | `UnavailableReason` | `AttemptBudgetExhausted` ou `TimeBudgetExhausted` | Motivo explícito do primeiro limite observado. O deadline também é observado durante as etapas longas por cancelamento interno; ao vencê-lo sem cancelamento do chamador, descarta o candidato em curso e retorna `Unavailable`. |
 
@@ -103,4 +103,5 @@ grade completa ──► cages conectadas/alvos ──► PuzzleDefinition
 4. `SolutionSearchResult.Multiplicity == Unique`.
 5. A análise lógica terminou pela primeira vez no nível pedido, segundo a versão/tie-break documentados.
 6. O `GeneratedPuzzle` não pode ser construído a partir de candidato incompleto, não único, não classificável ou cancelado.
-7. A definição entregue pelo gerador não contém valores fixos; a solução validada não é copiada para as células iniciais.
+7. Puzzles Easy são publicados com 27 valores iniciais corretos, distribuídos em três por linha, coluna e bloco 3×3; os demais valores continuam separados no `SolutionGrid`.
+8. A partição Easy não contém somente cages unitárias; os alvos correspondem à soma da solução nas posições de cada cage e são exibidos no canto superior esquerdo pelo tabuleiro.

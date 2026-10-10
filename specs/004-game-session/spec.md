@@ -15,6 +15,10 @@
 
 ## Clarifications
 
+### Session 2026-10-09
+
+- **Feedback de soma da cage**: destacar visualmente a área inteira quando todas as suas células estiverem preenchidas com dígitos distintos e a soma atingir o alvo. O destaque depende apenas das regras locais da cage, nunca da solução secreta.
+
 ### Session 2026-10-08
 
 - Q: Quando o app vai para segundo plano ou o sistema suspende a partida, como deve se comportar o cronômetro ao retornar? → A: Ao sair do primeiro plano, a partida pausa e o cronômetro para. Ao voltar, o jogador precisa tocar em “Retomar”.
@@ -104,6 +108,8 @@ O jogador pode usar candidatos, corrigir ações e compreender o fim da partida.
 - **FR-012**: O sistema MUST oferecer controles acessíveis por toque em Android e por mouse/teclado em Windows, com cada uma das 81 células e cada controle da partida acessíveis semanticamente por TalkBack no Android e Narrator no Windows. A descrição acessível de uma célula MUST informar posição, valor ou vazio, fixa/editável, notas, seleção, conflito e destaque de dica. Setas movem a seleção uma célula na direção indicada, sem circular nas bordas; 1–9 insere resposta ou alterna nota conforme o modo; Backspace/Delete limpa a resposta ou as notas da célula conforme o modo; Ctrl+Z desfaz e Ctrl+Y refaz. As mesmas intenções MUST estar disponíveis por controles acessíveis de toque.
 - **FR-013**: A sessão MUST manter uma `BoardRevision` monotônica e associar cada pedido de dica ao snapshot dos valores do `SudokuBoard` nessa revisão. Antes de exibir o resultado, MUST compará-la com a revisão atual; se estiver obsoleta, MUST descartá-lo, cancelar o pedido anterior quando possível e solicitar uma nova dica para o snapshot atual no nível 1. MUST exibir somente um resultado da revisão atual, inclusive `NoSafeHint`, e reiniciar a progressão no nível 1 após cada jogada que altere os valores do tabuleiro. Alterações somente em candidatos MUST NOT alterar a revisão nem invalidar o cálculo. O resultado 003 fornece a revisão analisada conforme `003-logical-hints` FR-005.
 
+- **FR-014**: Quando todas as células de uma cage estiverem preenchidas com dígitos distintos e a soma for igual ao alvo, o sistema MUST destacar visualmente todas as células dessa cage. Cages incompletas, com dígitos repetidos ou soma diferente do alvo MUST NOT receber esse destaque. A avaliação MUST usar somente os valores atuais e as regras da cage; MUST NOT consultar a solução secreta.
+
 ### Key Entities
 
 - **Partida**: puzzle ativo, estado do tabuleiro, dificuldade e tempo.
@@ -128,6 +134,8 @@ O jogador pode usar candidatos, corrigir ações e compreender o fim da partida.
 - **SC-010**: Em 100% dos resumos, a contagem corresponde às regras de FR-010: entradas conflitantes contam uma vez por entrada, correções/Undo/Redo não alteram a contagem histórica, respostas apenas divergentes da solução não contam, e cada nível progressivo exibido conta uma dica; `NoSafeHint`, cancelamentos e resultados obsoletos não contam.
 - **SC-011**: TalkBack no Android e Narrator no Windows permitem percorrer e operar todas as 81 células e controles, anunciar os estados semânticos de FR-012 e usar os comandos definidos sem depender apenas de cor.
 - **SC-012**: Em 100% dos pedidos assíncronos de geração/dica, o estado de carregamento é apresentado sem bloquear a interface; enquanto uma dica está pendente, seleção e edição continuam processáveis.
+
+- **SC-013**: Em 100% dos estados projetados, somente cages completas, sem repetição e com soma igual ao alvo recebem o destaque visual; cages incompletas ou inválidas não recebem esse destaque, e uma cage válida recebe o destaque mesmo quando seus valores divergem da solução secreta.
 
 ## Assumptions
 

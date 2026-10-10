@@ -42,19 +42,77 @@ public sealed class GameSession
 		GetCandidatesUseCase? getCandidates = null,
 		GetHintUseCase? getHintUseCase = null,
 		Func<HintRequest, CancellationToken, Task<HintResult>>? hintExecutor = null,
-		TimeProvider? timeProvider = null)
+		TimeProvider? timeProvider = null,
+		int initialDisplayedHintLevelCount = 0)
 	{
 		ArgumentNullException.ThrowIfNull(generatedPuzzle);
+		if (initialDisplayedHintLevelCount < 0)
+			throw new ArgumentOutOfRangeException(nameof(initialDisplayedHintLevelCount));
 		_generatedPuzzle = generatedPuzzle;
 		_applyMove = applyMove ?? new ApplyMoveUseCase();
 		_validateBoard = validateBoard ?? new ValidateBoardUseCase();
 		_getCandidates = getCandidates ?? new GetCandidatesUseCase();
 		_timer = new ActiveGameTimer(timeProvider);
 		_board = generatedPuzzle.Puzzle.CreateBoard();
+		_displayedHintLevelCount = initialDisplayedHintLevelCount;
 		UpdateValidation(_validateBoard.Execute(_board));
 		var puzzleContext = new HintPuzzleContext(generatedPuzzle.Puzzle, SolutionMultiplicity.Unique, generatedPuzzle.Solution);
-		_hintCoordinator = new GameSessionHintCoordinator(puzzleContext, GetHintBoardSnapshot, getHintUseCase, hintExecutor);
+		_hintCoordinator = new GameSessionHintCoordinator(
+			puzzleContext,
+			GetHintBoardSnapshot,
+			getHintUseCase,
+			hintExecutor,
+			initialDisplayedHintLevelCount);
 		_hintCoordinator.StateChanged += OnHintCoordinatorStateChanged;
+	}
+
+	internal static GameSession Restore(
+		GeneratedPuzzle generatedPuzzle,
+		SudokuBoard board,
+		CandidateNotes notes,
+		SessionHistoryState history,
+		TimeSpan activeElapsed,
+		int errorCount,
+		int displayedHintLevelCount,
+		TimeProvider? timeProvider = null,
+		GetHintUseCase? getHintUseCase = null)
+	{
+		ArgumentNullException.ThrowIfNull(board);
+		ArgumentNullException.ThrowIfNull(notes);
+		ArgumentNullException.ThrowIfNull(history);
+		if (activeElapsed < TimeSpan.Zero)
+			throw new ArgumentOutOfRangeException(nameof(activeElapsed));
+		if (errorCount < 0)
+			throw new ArgumentOutOfRangeException(nameof(errorCount));
+
+		var session = new GameSession(
+			generatedPuzzle,
+			getHintUseCase: getHintUseCase,
+			timeProvider: timeProvider,
+			initialDisplayedHintLevelCount: displayedHintLevelCount);
+		lock (session._sync)
+		{
+			session._board = board;
+			session._notes = notes;
+			session._history.RestoreState(history);
+			session._errorCount = errorCount;
+			session._timer.RestorePaused(activeElapsed);
+			session.UpdateValidation(session._validateBoard.Execute(board));
+		}
+		return session;
+	}
+
+	internal GameSessionPersistenceState CapturePersistenceState()
+	{
+		lock (_sync)
+			return new GameSessionPersistenceState(
+				_generatedPuzzle,
+				_board,
+				_notes,
+				_history.CaptureState(),
+				_timer.Elapsed,
+				_errorCount,
+				_displayedHintLevelCount);
 	}
 
 	/// <summary>Raised after a state change. UI hosts should marshal their binding refresh to the UI thread.</summary>
@@ -403,7 +461,14 @@ public sealed class GameSession
 			_conflictingPositions.Contains(cell.Position),
 			_notes.For(cell.Position),
 			hintRoles.Where(role => role.Value.Contains(cell.Position)).Select(role => role.Key)));
-		var cages = _board.Cages.Select(cage => new GameSessionCageViewState(cage.TargetSum, cage.Positions));
+		var cages = _board.Cages.Select(cage =>
+		{
+			var values = cage.Positions.Select(position => _board.GetCell(position).CurrentValue).ToArray();
+			var isSatisfied = values.All(static value => value.HasValue)
+				&& values.Select(static value => value.GetValueOrDefault()).Distinct().Count() == values.Length
+				&& values.Sum(static value => value.GetValueOrDefault()) == cage.TargetSum;
+			return new GameSessionCageViewState(cage.TargetSum, cage.Positions, isSatisfied);
+		});
 		return new GameSessionViewState(
 			_generatedPuzzle.RequestedDifficulty,
 			_selectedPosition,
@@ -430,3 +495,12 @@ public sealed class GameSession
 
 	private void RaiseViewStateChanged() => ViewStateChanged?.Invoke(this, EventArgs.Empty);
 }
+
+internal sealed record GameSessionPersistenceState(
+	GeneratedPuzzle GeneratedPuzzle,
+	SudokuBoard Board,
+	CandidateNotes Notes,
+	SessionHistoryState History,
+	TimeSpan ActiveElapsed,
+	int ErrorCount,
+	int DisplayedHintLevelCount);

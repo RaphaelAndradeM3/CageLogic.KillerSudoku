@@ -1,6 +1,6 @@
 # FEATURE SPEC: Persistência Offline e Progresso
 
-- **Feature Branch**: A definir na implementação
+- **Feature Branch**: 005-offline-progression
 - **Created**: 2026-10-01
 - **Status**: Draft
 **Input**: PRD RF-014 a RF-019; seções de persistência, estatísticas e métricas em PRD. Depende de 004-game-session.
@@ -12,6 +12,16 @@
 > **Definição de sucesso:** O jogo salva a partida localmente, restaura-a ao reabrir e apresenta estatísticas e preferências sem exigir login ou conexão.
 >
 > **Regra de ouro:** Preserve a arquitetura e as convenções do repositório; mantenha dados locais atrás de fronteiras de aplicação e não adicione serviços online ao MVP.
+
+## Clarifications
+
+### Session 2026-10-09
+
+- Q: Se o salvamento falhar ou os dados da partida não puderem ser lidos, como o app deve agir? → A: Preservar o último salvamento válido; avisar sobre a falha e manter a partida atual em memória; se não houver estado recuperável, pedir confirmação antes de iniciar outra partida.
+- Q: Se o aplicativo for encerrado inesperadamente logo após uma jogada, quanto progresso confirmado pode ser perdido? → A: Nenhuma jogada confirmada pode ser perdida; apenas uma jogada interrompida antes da confirmação pode precisar ser repetida.
+- Q: O que o app deve mostrar ao reabrir depois que a partida já foi concluída? → A: Abrir a tela inicial; manter a conclusão nas estatísticas e não restaurar a partida como ativa.
+- Q: Quando o jogador abandona uma partida antes de concluí-la, quais informações dela devem entrar nas estatísticas? → A: Contar como iniciada, não como concluída; excluir o tempo da média e do melhor tempo; incluir erros e dicas já usados nos totais.
+- Q: Quanto deve demorar, no máximo, para confirmar uma jogada depois de salvá-la localmente em condições normais? → A: Confirmar 95% das jogadas em até 250 ms; enquanto aguarda, manter a interface responsiva e indicar que a jogada ainda está sendo salva.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -28,6 +38,11 @@ O jogador fecha ou interrompe o aplicativo e retorna à mesma partida com seu es
 1. **Given** uma partida em andamento, **When** o estado muda, **Then** a partida é salva localmente sem exigir uma ação manual explícita.
 2. **Given** uma partida salva, **When** o jogador reabre o aplicativo, **Then** pode continuar do estado e tempo preservados.
 3. **Given** não há partida anterior, **When** o aplicativo é aberto, **Then** oferece iniciar uma nova partida sem apresentar dados inexistentes como salvos.
+4. **Given** uma partida em andamento com um salvamento válido, **When** uma gravação falha, **Then** o último salvamento válido é preservado, a partida continua em memória e o jogador é avisado de que mudanças recentes podem não estar salvas.
+5. **Given** nenhum estado válido pode ser recuperado, **When** o aplicativo é aberto, **Then** pede confirmação antes de iniciar outra partida.
+6. **Given** uma jogada foi confirmada ao jogador, **When** o aplicativo é encerrado inesperadamente e reaberto, **Then** todas as jogadas confirmadas são restauradas; apenas uma jogada interrompida antes da confirmação pode precisar ser repetida.
+7. **Given** a partida já foi concluída e registrada, **When** o jogador reabre o aplicativo, **Then** o app abre a tela inicial, mantém a conclusão nas estatísticas e não restaura a partida como ativa nem conta a conclusão novamente.
+8. **Given** uma jogada aguarda persistência local, **When** o salvamento está em andamento, **Then** a interface permanece responsiva, indica que a jogada está pendente e só a confirma após persistência; em condições normais, 95% dos salvamentos terminam em até 250 ms.
 
 ### User Story 2 - Acompanhar progresso e preferências (Priority: P2)
 
@@ -42,36 +57,37 @@ O jogador consulta resultados de partidas e escolhe preferências visuais que co
 1. **Given** partidas concluídas, **When** o jogador abre estatísticas, **Then** vê iniciadas, concluídas, tempo médio, melhor tempo, erros e dicas.
 2. **Given** o jogador muda o tema, **When** o aplicativo é reaberto, **Then** a preferência continua aplicada.
 3. **Given** nenhuma partida foi concluída, **When** estatísticas são abertas, **Then** valores vazios são exibidos sem erro nem divisão por zero.
+4. **Given** uma partida iniciada é explicitamente abandonada antes da conclusão, **When** as estatísticas são consultadas, **Then** ela conta como iniciada, mas não concluída; seu tempo não entra na média nem no melhor tempo, enquanto os erros e as dicas já usados entram nos totais.
 
 ### Edge Cases
 
-- Encerramento inesperado durante salvamento ou leitura.
-- Armazenamento local indisponível, cheio ou com dados antigos/inválidos.
+- Encerramento inesperado durante salvamento ou leitura: todas as jogadas confirmadas devem ser restauradas; uma jogada interrompida antes da confirmação pode precisar ser repetida, sem substituir o último salvamento válido.
+- Armazenamento local indisponível ou cheio: a falha de escrita preserva o último salvamento válido; o jogador pode continuar na sessão em memória e recebe aviso de que mudanças recentes podem não estar salvas. Dados antigos, incompatíveis ou inválidos não são tratados como íntegros.
 - Primeira inicialização e atualização de versão dos dados persistidos.
-- Reabertura de partida encerrada, limpa ou já concluída.
-- Estatísticas sem histórico, com partidas pausadas ou com sessão abandonada.
-- Falha de persistência não pode corromper silenciosamente a única cópia de uma partida.
+- Ao reabrir o aplicativo após uma conclusão, abrir a tela inicial, preservar a conclusão nas estatísticas e não contá-la novamente.
+- Estatísticas sem histórico, com partidas pausadas ou após abandono: a partida abandonada conta como iniciada, mas não concluída; seu tempo não entra na média nem no melhor tempo, e erros e dicas usados permanecem nos totais.
+- Se nenhum estado válido puder ser recuperado, o aplicativo pede confirmação antes de iniciar outra partida.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: O sistema MUST salvar automaticamente o estado da partida localmente durante o jogo.
-- **FR-002**: O sistema MUST restaurar a partida atual após reiniciar o aplicativo, incluindo puzzle, valores, candidatos, histórico necessário e tempo.
+- **FR-001**: O sistema MUST salvar automaticamente as mudanças da partida localmente. Uma jogada só é confirmada ao jogador após persistência local bem-sucedida. Em condições normais de armazenamento, 95% dos salvamentos MUST ser confirmados em até 250 ms. Enquanto um salvamento estiver pendente, a interface MUST continuar responsiva e indicar esse estado; uma jogada MUST NOT ser apresentada como confirmada antes de ser salva. Toda jogada confirmada MUST poder ser restaurada após encerramento inesperado; somente uma jogada interrompida antes da confirmação pode precisar ser repetida.
+- **FR-002**: O sistema MUST restaurar a partida atual após reiniciar o aplicativo, incluindo puzzle, valores, candidatos, histórico necessário e tempo. Se a partida já estiver concluída, MUST abrir a tela inicial sem restaurá-la como ativa e manter sua conclusão registrada uma única vez nas estatísticas.
 - **FR-003**: O sistema MUST operar os fluxos principais de partida, salvamento e retomada sem internet.
 - **FR-004**: O sistema MUST informar quando não existe partida anterior disponível.
-- **FR-005**: O sistema MUST registrar partidas iniciadas e concluídas, duração, melhor tempo, erros e dicas usadas.
+- **FR-005**: O sistema MUST contar uma partida como iniciada quando ela é criada e como concluída somente após a solução correta. Uma partida explicitamente abandonada MUST continuar contada como iniciada, mas não como concluída; sua duração MUST ser excluída da média e do melhor tempo, e seus erros e dicas já usados MUST permanecer nos totais.
 - **FR-006**: O sistema MUST calcular tempo médio e melhor tempo sem erro quando não houver partidas concluídas.
 - **FR-007**: O sistema MUST permitir escolher tema claro e escuro e preservar a preferência localmente.
-- **FR-008**: O sistema MUST apresentar falhas inesperadas por mensagem segura e permitir ao jogador tentar recuperar ou reiniciar sem expor detalhes internos.
+- **FR-008**: O sistema MUST apresentar falhas inesperadas com mensagem segura. Quando uma gravação falhar, MUST preservar o último estado de partida salvo validamente, manter a sessão atual em memória e avisar que alterações recentes não estão salvas; essas alterações MUST NOT ser apresentadas como confirmadas até que uma gravação seja bem-sucedida.
 - **FR-009**: O sistema MUST evitar registrar senha, token, dados pessoais ou conteúdo sensível nos logs.
-- **FR-010**: O sistema MUST tratar formatos persistidos incompatíveis ou inválidos sem iniciar uma partida incorreta como se fosse íntegra.
+- **FR-010**: O sistema MUST tratar formatos persistidos incompatíveis ou inválidos sem iniciar uma partida incorreta como se estivesse íntegra. Se nenhum estado válido puder ser recuperado, MUST pedir confirmação antes de iniciar outra partida.
 
 ### Key Entities
 
 - **Partida salva**: puzzle, estado editável, candidatos, tempo e progresso.
 - **Histórico de jogadas**: mudanças necessárias para retomar o estado e o undo/redo suportado.
-- **Registro de partida**: resultado, tempo, erros e dicas.
+- **Registro de partida**: estado concluído ou abandonado, tempo, erros e dicas; erros e dicas permanecem nos totais mesmo se a partida for abandonada.
 - **Estatísticas**: agregados de partidas iniciadas e concluídas.
 - **Preferências**: tema visual e escolhas locais do jogador.
 
@@ -79,10 +95,12 @@ O jogador consulta resultados de partidas e escolhe preferências visuais que co
 
 ### Measurable Outcomes
 
-- **SC-001**: 100% dos cenários de encerramento e reabertura restauram o último estado salvo válido da partida.
-- **SC-002**: As estatísticas exibidas correspondem exatamente às partidas concluídas nos cenários de referência.
+- **SC-001**: Em 100% dos testes de encerramento inesperado, todas as jogadas confirmadas ao jogador são restauradas; somente uma jogada interrompida antes da confirmação pode precisar ser repetida.
+- **SC-002**: As estatísticas correspondem exatamente às partidas concluídas nos cenários de referência; partidas abandonadas contam como iniciadas, não como concluídas, não afetam média/melhor tempo e mantêm erros e dicas nos totais; reabrir após uma conclusão não duplica a partida registrada.
 - **SC-003**: As preferências permanecem aplicadas após reiniciar o aplicativo nos dois sistemas-alvo.
 - **SC-004**: Os fluxos de retomada, estatísticas e tema funcionam sem conexão e não exigem conta de usuário.
+- **SC-005**: Em 100% dos testes de falha de gravação, o último salvamento válido é preservado, a sessão atual continua disponível em memória e o jogador recebe aviso; mudanças sem persistência bem-sucedida não são apresentadas como confirmadas; sem estado recuperável, outra partida não começa sem confirmação.
+- **SC-006**: Em condições normais de armazenamento local, pelo menos 95% dos salvamentos terminam e confirmam a jogada em até 250 ms; enquanto aguardam, a interface permanece responsiva e sinaliza que a jogada está pendente.
 
 ## Assumptions
 

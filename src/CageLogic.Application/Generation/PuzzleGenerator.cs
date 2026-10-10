@@ -9,6 +9,9 @@ namespace CageLogic.Application.Generation;
 /// <summary>Builds, validates and accepts only unique puzzles whose complete trace matches the request.</summary>
 public sealed class PuzzleGenerator
 {
+    private const int EasyInitialGivenCountPerRowAndBlock = 3;
+    private const int InitialGivenSelectionSalt = unchecked((int)0x6E624EB7);
+
     private readonly ISolvedGridGenerator _solvedGridGenerator;
     private readonly ICagePartitionGenerator _cagePartitionGenerator;
     private readonly PuzzleStructureValidator _structureValidator;
@@ -84,8 +87,9 @@ public sealed class PuzzleGenerator
                         request.Difficulty,
                         partitionSeed,
                         linkedCancellation.Token));
+                var givens = CreateInitialGivens(solutionValues, request.Difficulty, partitionSeed);
                 var definition = new PuzzleDefinition(
-                    givens: new Dictionary<PuzzleDefinitionPosition, int>(),
+                    givens,
                     cages);
                 var structure = Measure(
                     attempt + 1,
@@ -188,6 +192,42 @@ public sealed class PuzzleGenerator
     private static int DeriveSeed(int seed, int attempt)
     {
         return unchecked(seed + (attempt * (int)0x9E3779B9));
+    }
+
+    private static Dictionary<PuzzleDefinitionPosition, int> CreateInitialGivens(
+        IReadOnlyList<int> solutionValues,
+        DifficultyLevel difficulty,
+        int seed)
+    {
+        var givens = new Dictionary<PuzzleDefinitionPosition, int>();
+        if (difficulty != DifficultyLevel.Easy)
+        {
+            return givens;
+        }
+
+        var random = new Random(unchecked(seed ^ InitialGivenSelectionSalt));
+        for (var blockRow = 0; blockRow < 3; blockRow++)
+        {
+            for (var blockColumn = 0; blockColumn < 3; blockColumn++)
+            {
+                var localColumns = new[] { 0, 1, 2 };
+                for (var index = localColumns.Length - 1; index > 0; index--)
+                {
+                    var other = random.Next(index + 1);
+                    (localColumns[index], localColumns[other]) = (localColumns[other], localColumns[index]);
+                }
+
+                for (var localRow = 0; localRow < EasyInitialGivenCountPerRowAndBlock; localRow++)
+                {
+                    var row = blockRow * 3 + localRow;
+                    var column = blockColumn * 3 + localColumns[localRow];
+                    var position = new PuzzleDefinitionPosition(row, column);
+                    givens.Add(position, solutionValues[row * 9 + column]);
+                }
+            }
+        }
+
+        return givens;
     }
 
     private static void ThrowIfCallerCancelled(CancellationToken cancellationToken)

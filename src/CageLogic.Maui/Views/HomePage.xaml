@@ -2,17 +2,32 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="CageLogic.Maui.Views.HomePage"
-             Title="Killer Sudoku"
-             BackgroundColor="#F5F6F8">
+             Title="Killer Sudoku">
     <ScrollView>
         <VerticalStackLayout Padding="28,36" Spacing="20" MaximumWidthRequest="620" HorizontalOptions="Center" VerticalOptions="Center">
-            <Label Text="Killer Sudoku" FontSize="34" FontAttributes="Bold" TextColor="#14243A"
+            <Label Text="Killer Sudoku" FontSize="34" FontAttributes="Bold"
+                   TextColor="{AppThemeBinding Light=#14243A, Dark=#F3F6FA}"
                    SemanticProperties.HeadingLevel="Level1" />
             <Label Text="Resolva o tabuleiro respeitando as linhas, colunas, blocos e somas das cages."
-                   FontSize="16" TextColor="#526174" />
-            <Border Padding="18" BackgroundColor="White" Stroke="#DEE4EC" StrokeShape="RoundRectangle 16">
+                   FontSize="16" TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" />
+            <Border Padding="18" BackgroundColor="{AppThemeBinding Light=White, Dark=#1C2633}"
+                    Stroke="{AppThemeBinding Light=#DEE4EC, Dark=#3B4A5C}" StrokeShape="RoundRectangle 16">
                 <VerticalStackLayout Spacing="14">
-                    <Label Text="Dificuldade" FontSize="15" FontAttributes="Bold" TextColor="#25354A" />
+                    <HorizontalStackLayout Spacing="10" IsVisible="{Binding IsInitializing}">
+                        <ActivityIndicator IsRunning="{Binding IsInitializing}" Color="#315F9D" />
+                        <Label Text="Verificando partida salva..." TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    <Button Text="Continuar partida salva" Command="{Binding ResumeActiveGameCommand}"
+                            IsVisible="{Binding HasActiveGame}"
+                            SemanticProperties.Hint="Retoma a última partida salva com o cronômetro pausado" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <Button Text="Estatísticas" Command="{Binding OpenStatisticsCommand}"
+                                SemanticProperties.Hint="Mostra partidas, tempos, erros e dicas registrados" />
+                        <Button Grid.Column="1" Text="Tema" Command="{Binding OpenThemeSettingsCommand}"
+                                SemanticProperties.Hint="Abre as preferências de aparência" />
+                    </Grid>
+                    <Label Text="Dificuldade" FontSize="15" FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#25354A, Dark=#E4EAF2}" />
                     <Picker Title="Escolha a dificuldade"
                             ItemsSource="{Binding Difficulties}"
                             SelectedItem="{Binding SelectedDifficulty}"
@@ -20,15 +35,24 @@
                     <Button Text="Iniciar partida" Command="{Binding GeneratePuzzleCommand}"
                             IsEnabled="{Binding CanStartGeneration}"
                             SemanticProperties.Hint="Gera um puzzle da dificuldade escolhida" />
+                    <Button Text="Tentar verificar o salvamento novamente" Command="{Binding RetryLoadCommand}"
+                            IsVisible="{Binding HasLoadFailure}"
+                            BackgroundColor="{AppThemeBinding Light=#E8EDF4, Dark=#364557}"
+                            TextColor="{AppThemeBinding Light=#25354A, Dark=#F3F6FA}"
+                            SemanticProperties.Hint="Tenta carregar novamente a partida e verificar o armazenamento local" />
                     <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
                         <ActivityIndicator IsRunning="{Binding IsGenerating}" IsVisible="{Binding IsGenerating}" Color="#315F9D" />
-                        <Label Text="{Binding StatusMessage}" TextColor="#526174" VerticalOptions="Center" />
+                        <Label Text="{Binding StatusMessage}" TextColor="{AppThemeBinding Light=#526174, Dark=#C1CBD8}" VerticalOptions="Center" />
                     </HorizontalStackLayout>
                     <Button Text="Cancelar geração" Command="{Binding CancelGenerationCommand}"
-                            IsVisible="{Binding IsGenerating}" BackgroundColor="#E8EDF4" TextColor="#25354A"
+                            IsVisible="{Binding IsGenerating}"
+                            BackgroundColor="{AppThemeBinding Light=#E8EDF4, Dark=#364557}"
+                            TextColor="{AppThemeBinding Light=#25354A, Dark=#F3F6FA}"
                             SemanticProperties.Hint="Cancela o cálculo e permite tentar novamente" />
                     <Button Text="Tentar novamente" Command="{Binding GeneratePuzzleCommand}"
-                            IsVisible="{Binding HasRetryableFailure}" BackgroundColor="#E8EDF4" TextColor="#25354A" />
+                            IsVisible="{Binding HasRetryableFailure}"
+                            BackgroundColor="{AppThemeBinding Light=#E8EDF4, Dark=#364557}"
+                            TextColor="{AppThemeBinding Light=#25354A, Dark=#F3F6FA}" />
                 </VerticalStackLayout>
             </Border>
         </VerticalStackLayout>
