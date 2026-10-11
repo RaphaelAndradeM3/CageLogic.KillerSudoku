@@ -167,8 +167,8 @@ public sealed class KillerSudokuBoardDrawable : IDrawable
 
 	private static void DrawCageBoundariesAndTargets(ICanvas canvas, BoardGeometry geometry, GameSessionViewState viewState, bool isDarkTheme)
 	{
-		canvas.StrokeColor = isDarkTheme ? Color.FromArgb("#899AB0") : Color.FromArgb("#70849A");
-		canvas.StrokeSize = Math.Max(1f, geometry.CellSize * 0.035f);
+		canvas.StrokeColor = isDarkTheme ? Color.FromArgb("#8AB4F8") : Color.FromArgb("#1967D2");
+		canvas.StrokeSize = Math.Max(1.8f, geometry.CellSize * 0.055f);
 		canvas.StrokeDashPattern = [4f, 2.5f];
 		foreach (var cage in viewState.Cages)
 		{
